@@ -1,19 +1,230 @@
 import SwiftUI
+import UniformTypeIdentifiers
+import Foundation
+
+// MARK: - AppInfo
+struct AppInfo: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let displayName: String
+    let description: String
+    let downloadURL: String?
+    let fileExtension: String?
+    let installScript: String?
+    let category: String
+    let version: String?
+    let developer: String?
+    let iconName: String?
+    let isInstalled: Bool
+    
+    init(
+        id: String,
+        name: String,
+        displayName: String,
+        description: String,
+        downloadURL: String? = nil,
+        fileExtension: String? = nil,
+        installScript: String? = nil,
+        category: String = "General",
+        version: String? = nil,
+        developer: String? = nil,
+        iconName: String? = nil,
+        isInstalled: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.displayName = displayName
+        self.description = description
+        self.downloadURL = downloadURL
+        self.fileExtension = fileExtension
+        self.installScript = installScript
+        self.category = category
+        self.version = version
+        self.developer = developer
+        self.iconName = iconName
+        self.isInstalled = isInstalled
+    }
+}
+
+// MARK: - AppCollection
+struct AppCollection: Codable {
+    let version: String
+    let lastUpdated: String
+    let apps: [AppInfo]
+    
+    init(apps: [AppInfo]) {
+        self.version = "1.0"
+        self.lastUpdated = ISO8601DateFormatter().string(from: Date())
+        self.apps = apps
+    }
+}
+
+// MARK: - AppManager Service
+class AppManager: ObservableObject {
+    @Published var apps: [AppInfo] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    private let appsFilePath = "/Users/sachinkumar/Desktop/Scriptex/apps.json"
+    private let fileManager = FileManager.default
+    
+    init() {
+        loadApps()
+    }
+    
+    // MARK: - Load Apps
+    func loadApps() {
+        isLoading = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                let loadedApps = try await loadAppsFromFile()
+                await MainActor.run {
+                    self.apps = loadedApps
+                    self.isLoading = false
+                    Logger.shared.info("Loaded \(loadedApps.count) apps from JSON", category: "AppManager")
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = "Failed to load apps: \(error.localizedDescription)"
+                    self.isLoading = false
+                    Logger.shared.error("Failed to load apps: \(error.localizedDescription)", category: "AppManager")
+                }
+            }
+        }
+    }
+    
+    private func loadAppsFromFile() async throws -> [AppInfo] {
+        guard fileManager.fileExists(atPath: appsFilePath) else {
+            // Create default apps file if it doesn't exist
+            let defaultApps = createDefaultApps()
+            try await saveAppsToFile(defaultApps)
+            return defaultApps
+        }
+        
+        let data = try Data(contentsOf: URL(fileURLWithPath: appsFilePath))
+        let appCollection = try JSONDecoder().decode(AppCollection.self, from: data)
+        return appCollection.apps
+    }
+    
+    // MARK: - Save Apps
+    func saveApps() async throws {
+        try await saveAppsToFile(apps)
+        Logger.shared.info("Saved \(apps.count) apps to JSON", category: "AppManager")
+    }
+    
+    private func saveAppsToFile(_ apps: [AppInfo]) async throws {
+        let appCollection = AppCollection(apps: apps)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(appCollection)
+        try data.write(to: URL(fileURLWithPath: appsFilePath))
+    }
+    
+    // MARK: - Import/Export
+    func importApps(from filePath: String) async throws {
+        let data = try Data(contentsOf: URL(fileURLWithPath: filePath))
+        let appCollection = try JSONDecoder().decode(AppCollection.self, from: data)
+        
+        await MainActor.run {
+            self.apps = appCollection.apps
+            Logger.shared.info("Imported \(appCollection.apps.count) apps from \(filePath)", category: "AppManager")
+        }
+        
+        try await saveApps()
+    }
+    
+    func exportApps(to filePath: String) async throws {
+        let appCollection = AppCollection(apps: apps)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(appCollection)
+        try data.write(to: URL(fileURLWithPath: filePath))
+        Logger.shared.info("Exported \(apps.count) apps to \(filePath)", category: "AppManager")
+    }
+    
+    // MARK: - App Operations
+    func updateAppInstallStatus(_ appId: String, isInstalled: Bool) {
+        if let index = apps.firstIndex(where: { $0.id == appId }) {
+            apps[index] = AppInfo(
+                id: apps[index].id,
+                name: apps[index].name,
+                displayName: apps[index].displayName,
+                description: apps[index].description,
+                downloadURL: apps[index].downloadURL,
+                fileExtension: apps[index].fileExtension,
+                installScript: apps[index].installScript,
+                category: apps[index].category,
+                version: apps[index].version,
+                developer: apps[index].developer,
+                iconName: apps[index].iconName,
+                isInstalled: isInstalled
+            )
+            
+            Task {
+                try await saveApps()
+            }
+        }
+    }
+    
+    func addApp(_ app: AppInfo) {
+        apps.append(app)
+        Task {
+            try await saveApps()
+        }
+    }
+    
+    func removeApp(_ appId: String) {
+        apps.removeAll { $0.id == appId }
+        Task {
+            try await saveApps()
+        }
+    }
+    
+    // MARK: - Default Apps
+    private func createDefaultApps() -> [AppInfo] {
+        return [
+            AppInfo(
+                id: "vscode",
+                name: "Visual Studio Code",
+                displayName: "Visual Studio Code",
+                description: "Microsoft's lightweight code editor",
+                downloadURL: "https://code.visualstudio.com/sha/download?build=stable&os=darwin-universal",
+                fileExtension: "zip",
+                installScript: "/Users/sachinkumar/Desktop/scripts/universal_installer.sh",
+                category: "Development",
+                version: "Latest",
+                developer: "Microsoft",
+                iconName: "chevron.left.forwardslash.chevron.right"
+            ),
+            AppInfo(
+                id: "anydesk",
+                name: "AnyDesk",
+                displayName: "AnyDesk",
+                description: "Remote desktop access software",
+                downloadURL: "https://download.anydesk.com/anydesk.dmg",
+                fileExtension: "dmg",
+                installScript: "/Users/sachinkumar/Desktop/scripts/universal_installer.sh",
+                category: "Utilities",
+                version: "Latest",
+                developer: "AnyDesk Software GmbH",
+                iconName: "display"
+            )
+        ]
+    }
+}
 
 struct AppManagerView: View {
-    @State private var isInstallingVSCode = false
-    @State private var isInstallingAnyDesk = false
-    @State private var vsCodeStatus = ""
-    @State private var anyDeskStatus = ""
-    @State private var isLaunchingVSCode = false
-    @State private var isQuittingVSCode = false
-    @State private var isDeletingVSCode = false
-    @State private var isLaunchingAnyDesk = false
-    @State private var isQuittingAnyDesk = false
-    @State private var isDeletingAnyDesk = false
+    @StateObject private var appManager = AppManager()
+    @State private var operationStates: [String: AppOperationState] = [:]
+    @State private var showingImportPicker = false
+    @State private var showingExportPicker = false
+    @State private var statusMessages: [String: String] = [:]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
+            // Header
             HStack {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("App Manager")
@@ -25,368 +236,324 @@ struct AppManagerView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
+                
                 Spacer()
+                
+                // Import/Export Buttons
+                HStack(spacing: 12) {
+                    Button(action: { showingImportPicker = true }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.system(size: 14, weight: .medium))
+                            Text("Import Apps")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.blue)
+                        .cornerRadius(6)
+                    }
+                    
+                    Button(action: { showingExportPicker = true }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 14, weight: .medium))
+                            Text("Export Apps")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.green)
+                        .cornerRadius(6)
+                    }
+                }
             }
             .padding(.horizontal, 24)
             .padding(.top, 24)
             
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Available Applications")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                
-                // VS Code Installation Card
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Visual Studio Code")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.primary)
-                            
-                            Text("Microsoft's lightweight code editor")
-                                .font(.system(size: 14))
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        HStack(spacing: 8) {
-                            // Install Button
-                            Button(action: {
-                                installVSCode()
-                            }) {
-                                HStack(spacing: 4) {
-                                    if isInstallingVSCode {
-                                        ProgressView()
-                                            .scaleEffect(0.6)
-                                    } else {
-                                        Image(systemName: "arrow.down.circle")
-                                            .font(.system(size: 12, weight: .medium))
-                                    }
-                                    Text(isInstallingVSCode ? "Installing" : "Install")
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(isInstallingVSCode ? Color.gray : AppColors.primaryAccent)
-                                .cornerRadius(4)
-                            }
-                            .disabled(isInstallingVSCode)
-                            
-                            // Launch Button
-                            Button(action: {
-                                launchApp("Visual Studio Code")
-                            }) {
-                                HStack(spacing: 4) {
-                                    if isLaunchingVSCode {
-                                        ProgressView()
-                                            .scaleEffect(0.6)
-                                    } else {
-                                        Image(systemName: "play.circle")
-                                            .font(.system(size: 12, weight: .medium))
-                                    }
-                                    Text(isLaunchingVSCode ? "Launching" : "Run")
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(isLaunchingVSCode ? Color.gray : Color.green)
-                                .cornerRadius(4)
-                            }
-                            .disabled(isLaunchingVSCode)
-                            
-                            // Quit Button
-                            Button(action: {
-                                quitApp("Visual Studio Code")
-                            }) {
-                                HStack(spacing: 4) {
-                                    if isQuittingVSCode {
-                                        ProgressView()
-                                            .scaleEffect(0.6)
-                                    } else {
-                                        Image(systemName: "stop.circle")
-                                            .font(.system(size: 12, weight: .medium))
-                                    }
-                                    Text(isQuittingVSCode ? "Quitting" : "Quit")
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(isQuittingVSCode ? Color.gray : Color.orange)
-                                .cornerRadius(4)
-                            }
-                            .disabled(isQuittingVSCode)
-                            
-                            // Delete Button
-                            Button(action: {
-                                deleteApp("Visual Studio Code")
-                            }) {
-                                HStack(spacing: 4) {
-                                    if isDeletingVSCode {
-                                        ProgressView()
-                                            .scaleEffect(0.6)
-                                    } else {
-                                        Image(systemName: "trash.circle")
-                                            .font(.system(size: 12, weight: .medium))
-                                    }
-                                    Text(isDeletingVSCode ? "Deleting" : "Delete")
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(isDeletingVSCode ? Color.gray : Color.red)
-                                .cornerRadius(4)
-                            }
-                            .disabled(isDeletingVSCode)
-                        }
-                    }
-                }
-                .padding(16)
-                .background(Color(NSColor.controlBackgroundColor))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                )
-                .cornerRadius(8)
-                
-                // VS Code Installation Status
-                if !vsCodeStatus.isEmpty {
-                    Text(vsCodeStatus)
+            // Error Message
+            if let errorMessage = appManager.errorMessage {
+                Text(errorMessage)
+                    .font(.system(size: 14))
+                    .foregroundColor(.red)
+                    .padding(.horizontal, 24)
+            }
+            
+            // Loading Indicator
+            if appManager.isLoading {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Loading apps...")
                         .font(.system(size: 14))
-                        .foregroundColor(vsCodeStatus.contains("Error") ? .red : .green)
-                        .padding(.top, 8)
+                        .foregroundColor(.secondary)
                 }
-                
-                // AnyDesk Installation Card
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("AnyDesk")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.primary)
-                            
-                            Text("Remote desktop access software")
-                                .font(.system(size: 14))
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        HStack(spacing: 8) {
-                            // Install Button
-                            Button(action: {
-                                installAnyDesk()
-                            }) {
-                                HStack(spacing: 4) {
-                                    if isInstallingAnyDesk {
-                                        ProgressView()
-                                            .scaleEffect(0.6)
-                                    } else {
-                                        Image(systemName: "arrow.down.circle")
-                                            .font(.system(size: 12, weight: .medium))
-                                    }
-                                    Text(isInstallingAnyDesk ? "Installing" : "Install")
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(isInstallingAnyDesk ? Color.gray : AppColors.secondaryAccent)
-                                .cornerRadius(4)
-                            }
-                            .disabled(isInstallingAnyDesk)
-                            
-                            // Launch Button
-                            Button(action: {
-                                launchApp("AnyDesk")
-                            }) {
-                                HStack(spacing: 4) {
-                                    if isLaunchingAnyDesk {
-                                        ProgressView()
-                                            .scaleEffect(0.6)
-                                    } else {
-                                        Image(systemName: "play.circle")
-                                            .font(.system(size: 12, weight: .medium))
-                                    }
-                                    Text(isLaunchingAnyDesk ? "Launching" : "Run")
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(isLaunchingAnyDesk ? Color.gray : Color.green)
-                                .cornerRadius(4)
-                            }
-                            .disabled(isLaunchingAnyDesk)
-                            
-                            // Quit Button
-                            Button(action: {
-                                quitApp("AnyDesk")
-                            }) {
-                                HStack(spacing: 4) {
-                                    if isQuittingAnyDesk {
-                                        ProgressView()
-                                            .scaleEffect(0.6)
-                                    } else {
-                                        Image(systemName: "stop.circle")
-                                            .font(.system(size: 12, weight: .medium))
-                                    }
-                                    Text(isQuittingAnyDesk ? "Quitting" : "Quit")
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(isQuittingAnyDesk ? Color.gray : Color.orange)
-                                .cornerRadius(4)
-                            }
-                            .disabled(isQuittingAnyDesk)
-                            
-                            // Delete Button
-                            Button(action: {
-                                deleteApp("AnyDesk")
-                            }) {
-                                HStack(spacing: 4) {
-                                    if isDeletingAnyDesk {
-                                        ProgressView()
-                                            .scaleEffect(0.6)
-                                    } else {
-                                        Image(systemName: "trash.circle")
-                                            .font(.system(size: 12, weight: .medium))
-                                    }
-                                    Text(isDeletingAnyDesk ? "Deleting" : "Delete")
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(isDeletingAnyDesk ? Color.gray : Color.red)
-                                .cornerRadius(4)
-                            }
-                            .disabled(isDeletingAnyDesk)
-                        }
+                .padding(.horizontal, 24)
+            }
+            
+            // Apps List
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    Text("Available Applications (\(appManager.apps.count))")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 24)
+                    
+                    ForEach(appManager.apps) { app in
+                        AppCardView(
+                            app: app,
+                            operationState: operationStates[app.id] ?? AppOperationState(),
+                            statusMessage: statusMessages[app.id] ?? "",
+                            onInstall: { installApp(app) },
+                            onLaunch: { launchApp(app) },
+                            onQuit: { quitApp(app) },
+                            onDelete: { deleteApp(app) }
+                        )
+                        .padding(.horizontal, 24)
                     }
-                }
-                .padding(16)
-                .background(Color(NSColor.controlBackgroundColor))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                )
-                .cornerRadius(8)
-                
-                // AnyDesk Installation Status
-                if !anyDeskStatus.isEmpty {
-                    Text(anyDeskStatus)
-                        .font(.system(size: 14))
-                        .foregroundColor(anyDeskStatus.contains("Error") ? .red : .green)
-                        .padding(.top, 8)
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
             
             Spacer()
         }
+        .fileImporter(
+            isPresented: $showingImportPicker,
+            allowedContentTypes: [UTType.json],
+            allowsMultipleSelection: false
+        ) { result in
+            handleImport(result)
+        }
+        .fileExporter(
+            isPresented: $showingExportPicker,
+            document: AppJSONDocument(apps: appManager.apps),
+            contentType: UTType.json,
+            defaultFilename: "apps.json"
+        ) { result in
+            handleExport(result)
+        }
+        .onAppear {
+            initializeOperationStates()
+        }
+        .onChange(of: appManager.apps) { _ in
+            initializeOperationStates()
+        }
     }
     
-    private func installVSCode() {
-        Logger.shared.logUIEvent("Install VS Code button tapped", view: "AppManagerView")
+    private func initializeOperationStates() {
+        for app in appManager.apps {
+            if operationStates[app.id] == nil {
+                operationStates[app.id] = AppOperationState()
+            }
+        }
+    }
+    
+    // MARK: - App Operations
+    
+    private func installApp(_ app: AppInfo) {
+        Logger.shared.logUIEvent("Install \(app.name) button tapped", view: "AppManagerView")
         
-        isInstallingVSCode = true
-        vsCodeStatus = "Downloading VS Code..."
+        operationStates[app.id]?.isInstalling = true
+        statusMessages[app.id] = "Downloading \(app.name)..."
         
         Task {
             do {
-                Logger.shared.info("Starting VS Code installation", category: "AppInstallation")
-                let vsCodeURL = "https://code.visualstudio.com/sha/download?build=stable&os=darwin-universal"
+                Logger.shared.info("Starting \(app.name) installation", category: "AppInstallation")
                 
-                // Download the DMG file
-                await MainActor.run {
-                    vsCodeStatus = "Downloading VS Code DMG..."
-                }
-                
-                let downloadedPath = try await downloadFile(from: vsCodeURL, fileName: "VSCode.zip")
-                
-                // Install using the script
-                await MainActor.run {
-                    vsCodeStatus = "Installing VS Code..."
-                }
-                
-                let scriptPath = "/Users/sachinkumar/Desktop/scripts/universal_installer.sh"
-                Logger.shared.info("Executing VS Code installation script", category: "AppInstallation")
-                let result = try await ExecutionService.executeScript(at: [scriptPath,"-f" ,downloadedPath])
-                
-                await MainActor.run {
-                    isInstallingVSCode = false
-                    if result.contains("completed successfully") {
-                        vsCodeStatus = "✅ VS Code installed successfully!"
-                        Logger.shared.logAppInstallation(appName: "VS Code", success: true)
-                    } else {
-                        vsCodeStatus = "❌ Installation failed. Check console for details."
-                        Logger.shared.logAppInstallation(appName: "VS Code", success: false)
+                if let downloadURL = app.downloadURL {
+                    await MainActor.run {
+                        statusMessages[app.id] = "Downloading \(app.name)..."
+                    }
+                    
+                    let fileName = "\(app.id).\(app.fileExtension ?? "dmg")"
+                    let downloadedPath = try await downloadFile(from: downloadURL, fileName: fileName)
+                    
+                    await MainActor.run {
+                        statusMessages[app.id] = "Installing \(app.name)..."
+                    }
+                    
+                    let scriptPath = app.installScript ?? "/Users/sachinkumar/Desktop/scripts/universal_installer.sh"
+                    let result = try await ExecutionService.executeScript(at: [scriptPath, "-f", downloadedPath])
+                    
+                    await MainActor.run {
+                        operationStates[app.id]?.isInstalling = false
+                        if result.contains("completed successfully") {
+                            statusMessages[app.id] = "✅ \(app.name) installed successfully!"
+                            appManager.updateAppInstallStatus(app.id, isInstalled: true)
+                            Logger.shared.logAppInstallation(appName: app.name, success: true)
+                        } else {
+                            statusMessages[app.id] = "❌ Installation failed. Check console for details."
+                            Logger.shared.logAppInstallation(appName: app.name, success: false)
+                        }
+                    }
+                } else {
+                    await MainActor.run {
+                        operationStates[app.id]?.isInstalling = false
+                        statusMessages[app.id] = "⚠️ No download URL specified for \(app.name)"
                     }
                 }
             } catch {
-                Logger.shared.logAppInstallation(appName: "VS Code", success: false, error: error)
+                Logger.shared.logAppInstallation(appName: app.name, success: false, error: error)
                 await MainActor.run {
-                    isInstallingVSCode = false
-                    vsCodeStatus = "❌ Error: \(error.localizedDescription)"
+                    operationStates[app.id]?.isInstalling = false
+                    statusMessages[app.id] = "❌ Error: \(error.localizedDescription)"
                 }
             }
         }
     }
     
-    private func installAnyDesk() {
-        Logger.shared.logUIEvent("Install AnyDesk button tapped", view: "AppManagerView")
+    private func launchApp(_ app: AppInfo) {
+        Logger.shared.logUIEvent("Launch \(app.name) button tapped", view: "AppManagerView")
         
-        isInstallingAnyDesk = true
-        anyDeskStatus = "Downloading AnyDesk..."
+        operationStates[app.id]?.isLaunching = true
         
         Task {
             do {
-                Logger.shared.info("Starting AnyDesk installation", category: "AppInstallation")
-                let anyDeskURL = "https://download.anydesk.com/anydesk.dmg"
-                
-                // Download the DMG file
-                await MainActor.run {
-                    anyDeskStatus = "Downloading AnyDesk DMG..."
-                }
-                
-                let downloadedPath = try await downloadFile(from: anyDeskURL, fileName: "AnyDesk.dmg")
-                
-                // Install using the script
-                await MainActor.run {
-                    anyDeskStatus = "Installing AnyDesk..."
-                }
-                
-                let scriptPath = "/Users/sachinkumar/Desktop/scripts/universal_installer.sh"
-                Logger.shared.info("Executing AnyDesk installation script", category: "AppInstallation")
-                let result = try await ExecutionService.executeScript(at: [scriptPath, "-f", downloadedPath])
+                Logger.shared.info("Launching app: \(app.name)", category: "AppManagement")
+                let scriptPath = "/Users/sachinkumar/Desktop/scripts/app_manager.sh"
+                let result = try await ExecutionService.executeScript(at: [scriptPath, "launch", app.name])
                 
                 await MainActor.run {
-                    isInstallingAnyDesk = false
-                    if result.contains("completed successfully") {
-                        anyDeskStatus = "✅ AnyDesk installed successfully!"
-                        Logger.shared.logAppInstallation(appName: "AnyDesk", success: true)
+                    operationStates[app.id]?.isLaunching = false
+                    if result.contains("✅") {
+                        statusMessages[app.id] = "✅ \(app.name) launched successfully!"
+                    } else if result.contains("not be installed") {
+                        statusMessages[app.id] = "⚠️ \(app.name) is not installed"
                     } else {
-                        anyDeskStatus = "❌ Installation failed. Check console for details."
-                        Logger.shared.logAppInstallation(appName: "AnyDesk", success: false)
+                        statusMessages[app.id] = "❌ Failed to launch \(app.name)"
                     }
                 }
+                
+                Logger.shared.logAppOperation(appName: app.name, operation: "launch", success: result.contains("✅"))
             } catch {
-                Logger.shared.logAppInstallation(appName: "AnyDesk", success: false, error: error)
+                Logger.shared.error("Failed to launch \(app.name): \(error.localizedDescription)", category: "AppManagement")
                 await MainActor.run {
-                    isInstallingAnyDesk = false
-                    anyDeskStatus = "❌ Error: \(error.localizedDescription)"
+                    operationStates[app.id]?.isLaunching = false
+                    statusMessages[app.id] = "❌ Error launching \(app.name): \(error.localizedDescription)"
                 }
             }
         }
     }
+    
+    private func quitApp(_ app: AppInfo) {
+        Logger.shared.logUIEvent("Quit \(app.name) button tapped", view: "AppManagerView")
+        
+        operationStates[app.id]?.isQuitting = true
+        
+        Task {
+            do {
+                Logger.shared.info("Quitting app: \(app.name)", category: "AppManagement")
+                let scriptPath = "/Users/sachinkumar/Desktop/scripts/app_manager.sh"
+                let result = try await ExecutionService.executeScript(at: [scriptPath, "quit", app.name])
+                
+                await MainActor.run {
+                    operationStates[app.id]?.isQuitting = false
+                    if result.contains("✅") {
+                        statusMessages[app.id] = "✅ \(app.name) quit successfully!"
+                    } else if result.contains("not be running") {
+                        statusMessages[app.id] = "⚠️ \(app.name) is not currently running"
+                    } else {
+                        statusMessages[app.id] = "❌ Failed to quit \(app.name)"
+                    }
+                }
+                
+                Logger.shared.logAppOperation(appName: app.name, operation: "quit", success: result.contains("✅"))
+            } catch {
+                Logger.shared.error("Failed to quit \(app.name): \(error.localizedDescription)", category: "AppManagement")
+                await MainActor.run {
+                    operationStates[app.id]?.isQuitting = false
+                    statusMessages[app.id] = "❌ Error quitting \(app.name): \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+    
+    private func deleteApp(_ app: AppInfo) {
+        Logger.shared.logUIEvent("Delete \(app.name) button tapped", view: "AppManagerView")
+        
+        operationStates[app.id]?.isDeleting = true
+        
+        Task {
+            do {
+                Logger.shared.info("Deleting app: \(app.name)", category: "AppManagement")
+                let scriptPath = "/Users/sachinkumar/Desktop/scripts/app_manager.sh"
+                let result = try await ExecutionService.executeScript(at: ["bash", "-c", "echo 'y' | \(scriptPath) delete \(app.name)"])
+                
+                await MainActor.run {
+                    operationStates[app.id]?.isDeleting = false
+                    if result.contains("✅") {
+                        statusMessages[app.id] = "✅ \(app.name) deleted successfully!"
+                        appManager.updateAppInstallStatus(app.id, isInstalled: false)
+                    } else if result.contains("not found") {
+                        statusMessages[app.id] = "⚠️ \(app.name) is not installed"
+                    } else {
+                        statusMessages[app.id] = "❌ Failed to delete \(app.name)"
+                    }
+                }
+                
+                Logger.shared.logAppOperation(appName: app.name, operation: "delete", success: result.contains("✅"))
+            } catch {
+                Logger.shared.error("Failed to delete \(app.name): \(error.localizedDescription)", category: "AppManagement")
+                await MainActor.run {
+                    operationStates[app.id]?.isDeleting = false
+                    statusMessages[app.id] = "❌ Error deleting \(app.name): \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+    
+    // MARK: - Import/Export Handlers
+    
+    private func handleImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            
+            Task {
+                do {
+                    try await appManager.importApps(from: url.path)
+                    await MainActor.run {
+                        statusMessages["import"] = "✅ Apps imported successfully!"
+                    }
+                } catch {
+                    await MainActor.run {
+                        statusMessages["import"] = "❌ Import failed: \(error.localizedDescription)"
+                    }
+                    Logger.shared.error("Failed to import apps: \(error.localizedDescription)", category: "AppManager")
+                }
+            }
+            
+        case .failure(let error):
+            statusMessages["import"] = "❌ Import failed: \(error.localizedDescription)"
+            Logger.shared.error("Import file picker failed: \(error.localizedDescription)", category: "AppManager")
+        }
+    }
+    
+    private func handleExport(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            Task {
+                do {
+                    try await appManager.exportApps(to: url.path)
+                    await MainActor.run {
+                        statusMessages["export"] = "✅ Apps exported successfully!"
+                    }
+                } catch {
+                    await MainActor.run {
+                        statusMessages["export"] = "❌ Export failed: \(error.localizedDescription)"
+                    }
+                    Logger.shared.error("Failed to export apps: \(error.localizedDescription)", category: "AppManager")
+                }
+            }
+            
+        case .failure(let error):
+            statusMessages["export"] = "❌ Export failed: \(error.localizedDescription)"
+            Logger.shared.error("Export file picker failed: \(error.localizedDescription)", category: "AppManager")
+        }
+    }
+    
+    // MARK: - Download Helper
     
     private func downloadFile(from urlString: String, fileName: String) async throws -> String {
         Logger.shared.info("Starting download from \(urlString)", category: "Download")
@@ -415,12 +582,10 @@ struct AppManagerView: View {
                     let tempDir = URL(fileURLWithPath: "/var/tmp")
                     let namedTempURL = tempDir.appendingPathComponent(fileName)
                     
-                    // Remove existing temp file if it exists
                     if FileManager.default.fileExists(atPath: namedTempURL.path) {
                         try FileManager.default.removeItem(at: namedTempURL)
                     }
                     
-                    // Move to temp location with proper filename
                     try FileManager.default.moveItem(at: tempURL, to: namedTempURL)
                     
                     let duration = CFAbsoluteTimeGetCurrent() - startTime
@@ -438,163 +603,194 @@ struct AppManagerView: View {
             downloadTask.resume()
         }
     }
+}
+
+// MARK: - AppCardView
+
+struct AppCardView: View {
+    let app: AppInfo
+    @ObservedObject var operationState: AppOperationState
+    let statusMessage: String
+    let onInstall: () -> Void
+    let onLaunch: () -> Void
+    let onQuit: () -> Void
+    let onDelete: () -> Void
     
-    private func launchApp(_ appName: String) {
-        Logger.shared.logUIEvent("Launch \(appName) button tapped", view: "AppManagerView")
-        
-        if appName == "Visual Studio Code" {
-            isLaunchingVSCode = true
-        } else if appName == "AnyDesk" {
-            isLaunchingAnyDesk = true
-        }
-        
-        Task {
-            do {
-                Logger.shared.info("Launching app: \(appName)", category: "AppManagement")
-                let scriptPath = "/Users/sachinkumar/Desktop/scripts/app_manager.sh"
-                let result = try await ExecutionService.executeScript(at: [scriptPath, "launch", appName])
-                
-                await MainActor.run {
-                    if appName == "Visual Studio Code" {
-                        isLaunchingVSCode = false
-                        if result.contains("✅") {
-                            vsCodeStatus = "✅ \(appName) launched successfully!"
-                        } else if result.contains("not be installed") {
-                            vsCodeStatus = "⚠️ \(appName) is not installed"
-                        } else {
-                            vsCodeStatus = "❌ Failed to launch \(appName)"
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        if let iconName = app.iconName {
+                            Image(systemName: iconName)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(AppColors.primaryAccent)
                         }
-                    } else if appName == "AnyDesk" {
-                        isLaunchingAnyDesk = false
-                        if result.contains("✅") {
-                            anyDeskStatus = "✅ \(appName) launched successfully!"
-                        } else if result.contains("not be installed") {
-                            anyDeskStatus = "⚠️ \(appName) is not installed"
-                        } else {
-                            anyDeskStatus = "❌ Failed to launch \(appName)"
+                        
+                        Text(app.displayName)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                        
+                        if app.isInstalled {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(.green)
                         }
+                    }
+                    
+                    Text(app.description)
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                    
+                    if let developer = app.developer {
+                        Text("by \(developer)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
                     }
                 }
                 
-                Logger.shared.logAppOperation(appName: appName, operation: "launch", success: result.contains("✅"))
-            } catch {
-                Logger.shared.error("Failed to launch \(appName): \(error.localizedDescription)", category: "AppManagement")
-                await MainActor.run {
-                    if appName == "Visual Studio Code" {
-                        isLaunchingVSCode = false
-                        vsCodeStatus = "❌ Error launching \(appName): \(error.localizedDescription)"
-                    } else if appName == "AnyDesk" {
-                        isLaunchingAnyDesk = false
-                        anyDeskStatus = "❌ Error launching \(appName): \(error.localizedDescription)"
+                Spacer()
+                
+                // Action Buttons
+                HStack(spacing: 8) {
+                    // Install Button
+                    Button(action: onInstall) {
+                        HStack(spacing: 4) {
+                            if operationState.isInstalling {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                            } else {
+                                Image(systemName: "arrow.down.circle")
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            Text(operationState.isInstalling ? "Installing" : "Install")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(operationState.isInstalling ? Color.gray : AppColors.primaryAccent)
+                        .cornerRadius(4)
                     }
+                    .disabled(operationState.isInstalling)
+                    
+                    // Launch Button
+                    Button(action: onLaunch) {
+                        HStack(spacing: 4) {
+                            if operationState.isLaunching {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                            } else {
+                                Image(systemName: "play.circle")
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            Text(operationState.isLaunching ? "Launching" : "Run")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(operationState.isLaunching ? Color.gray : Color.green)
+                        .cornerRadius(4)
+                    }
+                    .disabled(operationState.isLaunching)
+                    
+                    // Quit Button
+                    Button(action: onQuit) {
+                        HStack(spacing: 4) {
+                            if operationState.isQuitting {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                            } else {
+                                Image(systemName: "stop.circle")
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            Text(operationState.isQuitting ? "Quitting" : "Quit")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(operationState.isQuitting ? Color.gray : Color.orange)
+                        .cornerRadius(4)
+                    }
+                    .disabled(operationState.isQuitting)
+                    
+                    // Delete Button
+                    Button(action: onDelete) {
+                        HStack(spacing: 4) {
+                            if operationState.isDeleting {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                            } else {
+                                Image(systemName: "trash.circle")
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            Text(operationState.isDeleting ? "Deleting" : "Delete")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(operationState.isDeleting ? Color.gray : Color.red)
+                        .cornerRadius(4)
+                    }
+                    .disabled(operationState.isDeleting)
                 }
             }
+            
+            // Status Message
+            if !statusMessage.isEmpty {
+                Text(statusMessage)
+                    .font(.system(size: 14))
+                    .foregroundColor(statusMessage.contains("✅") ? .green : statusMessage.contains("⚠️") ? .orange : .red)
+                    .padding(.top, 8)
+            }
         }
+        .padding(16)
+        .background(Color(NSColor.controlBackgroundColor))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+        )
+        .cornerRadius(8)
+    }
+}
+
+// MARK: - AppOperationState
+
+class AppOperationState: ObservableObject {
+    @Published var isInstalling = false
+    @Published var isLaunching = false
+    @Published var isQuitting = false
+    @Published var isDeleting = false
+}
+
+// MARK: - AppJSONDocument
+
+struct AppJSONDocument: FileDocument {
+    static var readableContentTypes: [UTType] = [.json]
+    static var writableContentTypes: [UTType] = [.json]
+    
+    let apps: [AppInfo]
+    
+    init(apps: [AppInfo]) {
+        self.apps = apps
     }
     
-    private func quitApp(_ appName: String) {
-        Logger.shared.logUIEvent("Quit \(appName) button tapped", view: "AppManagerView")
-        
-        if appName == "Visual Studio Code" {
-            isQuittingVSCode = true
-        } else if appName == "AnyDesk" {
-            isQuittingAnyDesk = true
+    init(configuration: ReadConfiguration) throws {
+        guard let data = configuration.file.regularFileContents else {
+            throw CocoaError(.fileReadCorruptFile)
         }
-        
-        Task {
-            do {
-                Logger.shared.info("Quitting app: \(appName)", category: "AppManagement")
-                let scriptPath = "/Users/sachinkumar/Desktop/scripts/app_manager.sh"
-                let result = try await ExecutionService.executeScript(at: [scriptPath, "quit", appName])
-                
-                await MainActor.run {
-                    if appName == "Visual Studio Code" {
-                        isQuittingVSCode = false
-                        if result.contains("✅") {
-                            vsCodeStatus = "✅ \(appName) quit successfully!"
-                        } else if result.contains("not be running") {
-                            vsCodeStatus = "⚠️ \(appName) is not currently running"
-                        } else {
-                            vsCodeStatus = "❌ Failed to quit \(appName)"
-                        }
-                    } else if appName == "AnyDesk" {
-                        isQuittingAnyDesk = false
-                        if result.contains("✅") {
-                            anyDeskStatus = "✅ \(appName) quit successfully!"
-                        } else if result.contains("not be running") {
-                            anyDeskStatus = "⚠️ \(appName) is not currently running"
-                        } else {
-                            anyDeskStatus = "❌ Failed to quit \(appName)"
-                        }
-                    }
-                }
-                
-                Logger.shared.logAppOperation(appName: appName, operation: "quit", success: result.contains("✅"))
-            } catch {
-                Logger.shared.error("Failed to quit \(appName): \(error.localizedDescription)", category: "AppManagement")
-                await MainActor.run {
-                    if appName == "Visual Studio Code" {
-                        isQuittingVSCode = false
-                        vsCodeStatus = "❌ Error quitting \(appName): \(error.localizedDescription)"
-                    } else if appName == "AnyDesk" {
-                        isQuittingAnyDesk = false
-                        anyDeskStatus = "❌ Error quitting \(appName): \(error.localizedDescription)"
-                    }
-                }
-            }
-        }
+        let appCollection = try JSONDecoder().decode(AppCollection.self, from: data)
+        self.apps = appCollection.apps
     }
     
-    private func deleteApp(_ appName: String) {
-        Logger.shared.logUIEvent("Delete \(appName) button tapped", view: "AppManagerView")
-        
-        if appName == "Visual Studio Code" {
-            isDeletingVSCode = true
-        } else if appName == "AnyDesk" {
-            isDeletingAnyDesk = true
-        }
-        
-        Task {
-            do {
-                Logger.shared.info("Deleting app: \(appName)", category: "AppManagement")
-                let scriptPath = "/Users/sachinkumar/Desktop/scripts/app_manager.sh"
-                let result = try await ExecutionService.executeScript(at: ["bash", "-c", "echo 'y' | \(scriptPath) delete \(appName)"])
-                
-                await MainActor.run {
-                    if appName == "Visual Studio Code" {
-                        isDeletingVSCode = false
-                        if result.contains("✅") {
-                            vsCodeStatus = "✅ \(appName) deleted successfully!"
-                        } else if result.contains("not found") {
-                            vsCodeStatus = "⚠️ \(appName) is not installed"
-                        } else {
-                            vsCodeStatus = "❌ Failed to delete \(appName)"
-                        }
-                    } else if appName == "AnyDesk" {
-                        isDeletingAnyDesk = false
-                        if result.contains("✅") {
-                            anyDeskStatus = "✅ \(appName) deleted successfully!"
-                        } else if result.contains("not found") {
-                            anyDeskStatus = "⚠️ \(appName) is not installed"
-                        } else {
-                            anyDeskStatus = "❌ Failed to delete \(appName)"
-                        }
-                    }
-                }
-                
-                Logger.shared.logAppOperation(appName: appName, operation: "delete", success: result.contains("✅"))
-            } catch {
-                Logger.shared.error("Failed to delete \(appName): \(error.localizedDescription)", category: "AppManagement")
-                await MainActor.run {
-                    if appName == "Visual Studio Code" {
-                        isDeletingVSCode = false
-                        vsCodeStatus = "❌ Error deleting \(appName): \(error.localizedDescription)"
-                    } else if appName == "AnyDesk" {
-                        isDeletingAnyDesk = false
-                        anyDeskStatus = "❌ Error deleting \(appName): \(error.localizedDescription)"
-                    }
-                }
-            }
-        }
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        let appCollection = AppCollection(apps: apps)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(appCollection)
+        return FileWrapper(regularFileWithContents: data)
     }
 }
