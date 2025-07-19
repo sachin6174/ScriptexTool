@@ -16,6 +16,7 @@ struct AppInfo: Codable, Identifiable, Hashable {
     let developer: String?
     let iconName: String?
     let isInstalled: Bool
+    let isStarred: Bool
     
     init(
         id: String,
@@ -29,7 +30,8 @@ struct AppInfo: Codable, Identifiable, Hashable {
         version: String? = nil,
         developer: String? = nil,
         iconName: String? = nil,
-        isInstalled: Bool = false
+        isInstalled: Bool = false,
+        isStarred: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -43,6 +45,31 @@ struct AppInfo: Codable, Identifiable, Hashable {
         self.developer = developer
         self.iconName = iconName
         self.isInstalled = isInstalled
+        self.isStarred = isStarred
+    }
+    
+    // Custom decoding to handle missing fields
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        displayName = try container.decode(String.self, forKey: .displayName)
+        description = try container.decode(String.self, forKey: .description)
+        downloadURL = try container.decodeIfPresent(String.self, forKey: .downloadURL)
+        fileExtension = try container.decodeIfPresent(String.self, forKey: .fileExtension)
+        installScript = try container.decodeIfPresent(String.self, forKey: .installScript)
+        category = try container.decodeIfPresent(String.self, forKey: .category) ?? "General"
+        version = try container.decodeIfPresent(String.self, forKey: .version)
+        developer = try container.decodeIfPresent(String.self, forKey: .developer)
+        iconName = try container.decodeIfPresent(String.self, forKey: .iconName)
+        isInstalled = try container.decodeIfPresent(Bool.self, forKey: .isInstalled) ?? false
+        isStarred = try container.decodeIfPresent(Bool.self, forKey: .isStarred) ?? false
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case id, name, displayName, description, downloadURL, fileExtension
+        case installScript, category, version, developer, iconName, isInstalled, isStarred
     }
 }
 
@@ -125,11 +152,37 @@ class AppManager: ObservableObject {
     // MARK: - Import/Export
     func importApps(from filePath: String) async throws {
         let data = try Data(contentsOf: URL(fileURLWithPath: filePath))
-        let appCollection = try JSONDecoder().decode(AppCollection.self, from: data)
         
-        await MainActor.run {
-            self.apps = appCollection.apps
-            Logger.shared.info("Imported \(appCollection.apps.count) apps from \(filePath)", category: "AppManager")
+        // Try to decode as AppCollection first
+        do {
+            let appCollection = try JSONDecoder().decode(AppCollection.self, from: data)
+            await MainActor.run {
+                self.apps = appCollection.apps
+                Logger.shared.info("Imported \(appCollection.apps.count) apps from \(filePath) (AppCollection format)", category: "AppManager")
+            }
+        } catch {
+            // If that fails, try to decode as a simple array or direct object
+            do {
+                // Try as direct apps array
+                let appsArray = try JSONDecoder().decode([AppInfo].self, from: data)
+                await MainActor.run {
+                    self.apps = appsArray
+                    Logger.shared.info("Imported \(appsArray.count) apps from \(filePath) (Array format)", category: "AppManager")
+                }
+            } catch {
+                // Try as object with "apps" key
+                let jsonObject = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+                if let appsData = jsonObject?["apps"] as? [[String: Any]] {
+                    let appsJsonData = try JSONSerialization.data(withJSONObject: appsData)
+                    let appsArray = try JSONDecoder().decode([AppInfo].self, from: appsJsonData)
+                    await MainActor.run {
+                        self.apps = appsArray
+                        Logger.shared.info("Imported \(appsArray.count) apps from \(filePath) (Object format)", category: "AppManager")
+                    }
+                } else {
+                    throw NSError(domain: "ImportError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unsupported JSON format. Expected AppCollection, array of apps, or object with 'apps' array."])
+                }
+            }
         }
         
         try await saveApps()
@@ -159,7 +212,8 @@ class AppManager: ObservableObject {
                 version: apps[index].version,
                 developer: apps[index].developer,
                 iconName: apps[index].iconName,
-                isInstalled: isInstalled
+                isInstalled: isInstalled,
+                isStarred: apps[index].isStarred
             )
             
             Task {
@@ -179,6 +233,30 @@ class AppManager: ObservableObject {
         apps.removeAll { $0.id == appId }
         Task {
             try await saveApps()
+        }
+    }
+    
+    func toggleStar(_ appId: String) {
+        if let index = apps.firstIndex(where: { $0.id == appId }) {
+            apps[index] = AppInfo(
+                id: apps[index].id,
+                name: apps[index].name,
+                displayName: apps[index].displayName,
+                description: apps[index].description,
+                downloadURL: apps[index].downloadURL,
+                fileExtension: apps[index].fileExtension,
+                installScript: apps[index].installScript,
+                category: apps[index].category,
+                version: apps[index].version,
+                developer: apps[index].developer,
+                iconName: apps[index].iconName,
+                isInstalled: apps[index].isInstalled,
+                isStarred: !apps[index].isStarred
+            )
+            
+            Task {
+                try await saveApps()
+            }
         }
     }
     
@@ -221,6 +299,37 @@ struct AppManagerView: View {
     @State private var showingImportPicker = false
     @State private var showingExportPicker = false
     @State private var statusMessages: [String: String] = [:]
+    @State private var searchText = ""
+    @State private var selectedCategory = "All"
+    @State private var showOnlyStarred = false
+    
+    private var categories: [String] {
+        let allCategories = Set(appManager.apps.map { $0.category })
+        return ["All"] + Array(allCategories).sorted()
+    }
+    
+    private var filteredApps: [AppInfo] {
+        appManager.apps.filter { app in
+            let matchesSearch = searchText.isEmpty || 
+                app.displayName.localizedCaseInsensitiveContains(searchText) ||
+                app.description.localizedCaseInsensitiveContains(searchText) ||
+                app.developer?.localizedCaseInsensitiveContains(searchText) == true
+            
+            let matchesCategory = selectedCategory == "All" || app.category == selectedCategory
+            let matchesStarFilter = !showOnlyStarred || app.isStarred
+            
+            return matchesSearch && matchesCategory && matchesStarFilter
+        }.sorted { first, second in
+            // Sort by: starred first, then installed, then alphabetically
+            if first.isStarred != second.isStarred {
+                return first.isStarred && !second.isStarred
+            }
+            if first.isInstalled != second.isInstalled {
+                return first.isInstalled && !second.isInstalled
+            }
+            return first.displayName < second.displayName
+        }
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -273,6 +382,69 @@ struct AppManagerView: View {
             .padding(.horizontal, 24)
             .padding(.top, 24)
             
+            // Search and Filters
+            VStack(alignment: .leading, spacing: 12) {
+                // Search Bar
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                    TextField("Search apps...", text: $searchText)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                }
+                
+                // Filter Controls
+                HStack(spacing: 16) {
+                    // Category Filter
+                    HStack(spacing: 8) {
+                        Text("Category:")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Picker("Category", selection: $selectedCategory) {
+                            ForEach(categories, id: \.self) { category in
+                                Text(category).tag(category)
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                        .frame(minWidth: 120)
+                    }
+                    
+                    // Starred Filter
+                    Toggle(isOn: $showOnlyStarred) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "star.fill")
+                                .foregroundColor(.yellow)
+                                .font(.system(size: 12))
+                            Text("Starred only")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Results count
+                    Text("\(filteredApps.count) apps")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.horizontal, 24)
+            
+            // Import/Export Status Messages
+            if let importMessage = statusMessages["import"] {
+                Text(importMessage)
+                    .font(.system(size: 14))
+                    .foregroundColor(importMessage.contains("✅") ? .green : .red)
+                    .padding(.horizontal, 24)
+            }
+            
+            if let exportMessage = statusMessages["export"] {
+                Text(exportMessage)
+                    .font(.system(size: 14))
+                    .foregroundColor(exportMessage.contains("✅") ? .green : .red)
+                    .padding(.horizontal, 24)
+            }
+            
             // Error Message
             if let errorMessage = appManager.errorMessage {
                 Text(errorMessage)
@@ -296,22 +468,34 @@ struct AppManagerView: View {
             // Apps List
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 16) {
-                    Text("Available Applications (\(appManager.apps.count))")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 24)
-                    
-                    ForEach(appManager.apps) { app in
-                        AppCardView(
-                            app: app,
-                            operationState: operationStates[app.id] ?? AppOperationState(),
-                            statusMessage: statusMessages[app.id] ?? "",
-                            onInstall: { installApp(app) },
-                            onLaunch: { launchApp(app) },
-                            onQuit: { quitApp(app) },
-                            onDelete: { deleteApp(app) }
-                        )
-                        .padding(.horizontal, 24)
+                    if filteredApps.isEmpty && !searchText.isEmpty {
+                        VStack(spacing: 16) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 48))
+                                .foregroundColor(.secondary)
+                            Text("No apps found")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            Text("Try adjusting your search or filters")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 60)
+                    } else {
+                        ForEach(filteredApps) { app in
+                            AppCardView(
+                                app: app,
+                                operationState: operationStates[app.id] ?? AppOperationState(),
+                                statusMessage: statusMessages[app.id] ?? "",
+                                onInstall: { installApp(app) },
+                                onLaunch: { launchApp(app) },
+                                onQuit: { quitApp(app) },
+                                onDelete: { deleteApp(app) },
+                                onToggleStar: { appManager.toggleStar(app.id) }
+                            )
+                            .padding(.horizontal, 24)
+                        }
                     }
                 }
             }
@@ -510,22 +694,36 @@ struct AppManagerView: View {
         case .success(let urls):
             guard let url = urls.first else { return }
             
+            // Clear any previous import status
+            statusMessages.removeValue(forKey: "import")
+            
             Task {
                 do {
                     try await appManager.importApps(from: url.path)
                     await MainActor.run {
-                        statusMessages["import"] = "✅ Apps imported successfully!"
+                        statusMessages["import"] = "✅ Apps imported successfully from \(url.lastPathComponent)!"
+                        // Clear the message after 5 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                            statusMessages.removeValue(forKey: "import")
+                        }
                     }
                 } catch {
                     await MainActor.run {
                         statusMessages["import"] = "❌ Import failed: \(error.localizedDescription)"
+                        // Clear the error message after 10 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                            statusMessages.removeValue(forKey: "import")
+                        }
                     }
-                    Logger.shared.error("Failed to import apps: \(error.localizedDescription)", category: "AppManager")
+                    Logger.shared.error("Failed to import apps from \(url.path): \(error.localizedDescription)", category: "AppManager")
                 }
             }
             
         case .failure(let error):
-            statusMessages["import"] = "❌ Import failed: \(error.localizedDescription)"
+            statusMessages["import"] = "❌ File selection failed: \(error.localizedDescription)"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                statusMessages.removeValue(forKey: "import")
+            }
             Logger.shared.error("Import file picker failed: \(error.localizedDescription)", category: "AppManager")
         }
     }
@@ -533,22 +731,36 @@ struct AppManagerView: View {
     private func handleExport(_ result: Result<URL, Error>) {
         switch result {
         case .success(let url):
+            // Clear any previous export status
+            statusMessages.removeValue(forKey: "export")
+            
             Task {
                 do {
                     try await appManager.exportApps(to: url.path)
                     await MainActor.run {
-                        statusMessages["export"] = "✅ Apps exported successfully!"
+                        statusMessages["export"] = "✅ Apps exported successfully to \(url.lastPathComponent)!"
+                        // Clear the message after 5 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                            statusMessages.removeValue(forKey: "export")
+                        }
                     }
                 } catch {
                     await MainActor.run {
                         statusMessages["export"] = "❌ Export failed: \(error.localizedDescription)"
+                        // Clear the error message after 10 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                            statusMessages.removeValue(forKey: "export")
+                        }
                     }
-                    Logger.shared.error("Failed to export apps: \(error.localizedDescription)", category: "AppManager")
+                    Logger.shared.error("Failed to export apps to \(url.path): \(error.localizedDescription)", category: "AppManager")
                 }
             }
             
         case .failure(let error):
-            statusMessages["export"] = "❌ Export failed: \(error.localizedDescription)"
+            statusMessages["export"] = "❌ File selection failed: \(error.localizedDescription)"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                statusMessages.removeValue(forKey: "export")
+            }
             Logger.shared.error("Export file picker failed: \(error.localizedDescription)", category: "AppManager")
         }
     }
@@ -615,6 +827,7 @@ struct AppCardView: View {
     let onLaunch: () -> Void
     let onQuit: () -> Void
     let onDelete: () -> Void
+    let onToggleStar: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -630,6 +843,12 @@ struct AppCardView: View {
                         Text(app.displayName)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.primary)
+                        
+                        if app.isStarred {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(.yellow)
+                        }
                         
                         if app.isInstalled {
                             Image(systemName: "checkmark.circle.fill")
@@ -653,6 +872,15 @@ struct AppCardView: View {
                 
                 // Action Buttons
                 HStack(spacing: 8) {
+                    // Star Button
+                    Button(action: onToggleStar) {
+                        Image(systemName: app.isStarred ? "star.fill" : "star")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(app.isStarred ? .yellow : .gray)
+                            .frame(width: 24, height: 24)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
                     // Install Button
                     Button(action: onInstall) {
                         HStack(spacing: 4) {

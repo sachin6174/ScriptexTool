@@ -23,12 +23,13 @@ class UserManagementService: ObservableObject {
                 let systemUsers = try await fetchSystemUsers()
                 self.users = systemUsers
                 self.isLoading = false
-                logger.info("Successfully loaded \(systemUsers.count) users")
+                self.errorMessage = nil
+                logger.info("Successfully loaded \(systemUsers.count) real users from script")
             } catch {
-                self.errorMessage = error.localizedDescription
+                self.errorMessage = "Failed to load users from script: \(error.localizedDescription)"
                 self.isLoading = false
-                logger.error("Failed to load users: \(error.localizedDescription)")
-                self.users = UserInfo.mockUsers
+                self.users = [] // No fallback to mock data
+                logger.error("Failed to load users from script: \(error.localizedDescription)")
             }
         }
     }
@@ -38,201 +39,213 @@ class UserManagementService: ObservableObject {
         loadUsers()
     }
     
-    private func fetchSystemUsers() async throws -> [UserInfo] {
-        return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    var users: [UserInfo] = []
-                    
-                    let userListProcess = Process()
-                    userListProcess.launchPath = "/usr/bin/dscl"
-                    userListProcess.arguments = [".", "-list", "/Users"]
-                    
-                    let pipe = Pipe()
-                    userListProcess.standardOutput = pipe
-                    userListProcess.launch()
-                    userListProcess.waitUntilExit()
-                    
-                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                    let output = String(data: data, encoding: .utf8) ?? ""
-                    
-                    let usernames = output.components(separatedBy: .newlines)
-                        .map { $0.trimmingCharacters(in: .whitespaces) }
-                        .filter { !$0.isEmpty && !$0.hasPrefix("_") && $0 != "daemon" && $0 != "nobody" }
-                    
-                    for username in usernames {
-                        if let userInfo = self.getUserInfo(for: username) {
-                            users.append(userInfo)
-                        }
-                    }
-                    
-                    continuation.resume(returning: users)
-                } catch {
-                    continuation.resume(throwing: error)
-                }
+    // Test function to verify script execution
+    func testScriptExecution() async -> String {
+        do {
+            let scriptPath = "/Users/sachinkumar/Desktop/scripts/user_manager.sh"
+            
+            // First test: check if script exists
+            let fileManager = FileManager.default
+            guard fileManager.fileExists(atPath: scriptPath) else {
+                return "❌ Script not found at path: \(scriptPath)"
             }
+            
+            // Second test: check if script is executable
+            guard fileManager.isExecutableFile(atPath: scriptPath) else {
+                return "❌ Script is not executable: \(scriptPath)"
+            }
+            
+            // Third test: execute script
+            logger.info("Testing script execution: sudo \(scriptPath) get_details")
+            let result = try await ExecutionService.executeScript(at: [
+                "sudo", scriptPath, "get_details"
+            ])
+            
+            if result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return "❌ Script executed but returned empty output"
+            }
+            
+            let cleanResult = result.replacingOccurrences(of: "\u{001B}\[[0-9;]*m", with: "", options: .regularExpression)
+            return "✅ Script executed successfully:\n\n\(cleanResult.prefix(500))..."
+            
+        } catch {
+            return "❌ Script execution failed: \(error.localizedDescription)"
         }
     }
     
-    private func getUserInfo(for username: String) -> UserInfo? {
-        guard let userRecord = getUserRecord(username: username) else { return nil }
+    private func fetchSystemUsers() async throws -> [UserInfo] {
+        let scriptPath = "/Users/sachinkumar/Desktop/scripts/user_manager.sh"
         
-        let fullName = userRecord["RealName"] as? String ?? username
-        let isAdmin = isUserAdmin(username: username)
-        let userType: UserType = isAdmin ? .admin : .standard
-        let secureTokenStatus = getSecureTokenStatus(for: username)
+        logger.info("Executing script: sudo \(scriptPath) get_details")
         
-        let lastLoginTime = getLastLoginTime(for: username)
-        let lastLogoutTime = getLastLogoutTime(for: username)
-        let lastPasswordChangeTime = getLastPasswordChangeTime(for: username)
-        let lastTerminalSessionTime = getLastTerminalSessionTime(for: username)
+        // Execute the script to get all user details
+        let result = try await ExecutionService.executeScript(at: [
+            "sudo", scriptPath, "get_details"
+        ])
         
-        return UserInfo(
-            username: username,
-            fullName: fullName,
+        logger.info("Script output received: \(result.prefix(200))...")  // Log first 200 chars
+        
+        if result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            throw NSError(domain: "UserManagementService", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Script returned empty output"
+            ])
+        }
+        
+        let users = parseScriptOutput(result)
+        
+        if users.isEmpty {
+            logger.warning("No users parsed from script output")
+        }
+        
+        return users
+    }
+    
+    private func parseScriptOutput(_ output: String) -> [UserInfo] {
+        var users: [UserInfo] = []
+        
+        logger.info("Parsing script output, length: \(output.count) characters")
+        
+        // Clean the output of ANSI color codes first
+        let cleanOutput = output.replacingOccurrences(of: "\u{001B}\[[0-9;]*m", with: "", options: .regularExpression)
+        
+        // Split by the user detail headers
+        let userBlocks = cleanOutput.components(separatedBy: "=== User Details for: ")
+        
+        logger.info("Found \(userBlocks.count - 1) user blocks")
+        
+        for i in 1..<userBlocks.count { // Start from 1 to skip the first empty element
+            let block = userBlocks[i]
+            logger.info("Processing user block \(i): \(block.prefix(100))...")
+            
+            if let user = parseUserBlock(block) {
+                users.append(user)
+                logger.info("Successfully parsed user: \(user.username)")
+            } else {
+                logger.warning("Failed to parse user block \(i)")
+            }
+        }
+        
+        logger.info("Total users parsed: \(users.count)")
+        return users
+    }
+    
+    private func parseUserBlock(_ block: String) -> UserInfo? {
+        let lines = block.components(separatedBy: .newlines)
+        
+        var username: String?
+        var userType: UserType = .standard
+        var lastPasswordChange: Date?
+        var lastLogin: Date?
+        var lastLogout: Date?
+        var passwordHintStatus: String?
+        var secureTokenStatus: SecureTokenStatus = .unknown
+        
+        // Extract username from the first line (format: "username ===")
+        if let firstLine = lines.first {
+            let trimmedFirstLine = firstLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Handle format: "username ==="
+            if trimmedFirstLine.hasSuffix(" ===") {
+                username = String(trimmedFirstLine.dropLast(4)).trimmingCharacters(in: .whitespacesAndNewlines)
+            } else if let spaceIndex = trimmedFirstLine.firstIndex(of: " ") {
+                username = String(trimmedFirstLine[..<spaceIndex])
+            } else {
+                username = trimmedFirstLine
+            }
+            
+            logger.info("Extracted username from first line: '\(username ?? "nil")'")
+        }
+        
+        for (lineIndex, line) in lines.enumerated() {
+            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            if trimmedLine.hasPrefix("Username:") {
+                let extractedUsername = String(trimmedLine.dropFirst(9)).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !extractedUsername.isEmpty {
+                    username = extractedUsername
+                    logger.info("Username from line \(lineIndex): \(extractedUsername)")
+                }
+            } else if trimmedLine.hasPrefix("User Type:") {
+                let typeString = String(trimmedLine.dropFirst(10)).trimmingCharacters(in: .whitespacesAndNewlines)
+                userType = typeString.contains("Administrator") ? .admin : .standard
+                logger.info("User type: \(typeString) -> \(userType)")
+            } else if trimmedLine.hasPrefix("Last Password Change:") {
+                let dateString = String(trimmedLine.dropFirst(21)).trimmingCharacters(in: .whitespacesAndNewlines)
+                lastPasswordChange = parseDate(from: dateString)
+                logger.info("Password change: \(dateString) -> \(lastPasswordChange?.description ?? "nil")")
+            } else if trimmedLine.hasPrefix("Last Login:") {
+                let dateString = String(trimmedLine.dropFirst(12)).trimmingCharacters(in: .whitespacesAndNewlines)
+                lastLogin = parseDate(from: dateString)
+                logger.info("Last login: \(dateString) -> \(lastLogin?.description ?? "nil")")
+            } else if trimmedLine.hasPrefix("Last Logout:") {
+                let dateString = String(trimmedLine.dropFirst(13)).trimmingCharacters(in: .whitespacesAndNewlines)
+                lastLogout = parseDate(from: dateString)
+                logger.info("Last logout: \(dateString) -> \(lastLogout?.description ?? "nil")")
+            } else if trimmedLine.hasPrefix("Password Hint Status:") {
+                passwordHintStatus = String(trimmedLine.dropFirst(21)).trimmingCharacters(in: .whitespacesAndNewlines)
+                logger.info("Password hint status: \(passwordHintStatus ?? "nil")")
+            } else if trimmedLine.hasPrefix("Secure Token Status:") {
+                let statusString = String(trimmedLine.dropFirst(20)).trimmingCharacters(in: .whitespacesAndNewlines)
+                secureTokenStatus = statusString.contains("Enabled") ? .enabled : .disabled
+                logger.info("Secure token: \(statusString) -> \(secureTokenStatus)")
+            }
+        }
+        
+        guard let validUsername = username, !validUsername.isEmpty else {
+            logger.error("No valid username found in block")
+            return nil
+        }
+        
+        // Clean username if it has extra characters
+        let cleanUsername = validUsername.components(separatedBy: .whitespacesAndNewlines).first ?? validUsername
+        
+        let userInfo = UserInfo(
+            username: cleanUsername,
+            fullName: cleanUsername, // Script doesn't provide full name, use username
             userType: userType,
             secureTokenStatus: secureTokenStatus,
-            lastLoginTime: lastLoginTime,
-            lastLogoutTime: lastLogoutTime,
-            lastPasswordChangeTime: lastPasswordChangeTime,
-            lastTerminalSessionTime: lastTerminalSessionTime
+            lastLoginTime: lastLogin,
+            lastLogoutTime: lastLogout,
+            lastPasswordChangeTime: lastPasswordChange,
+            lastTerminalSessionTime: nil, // Not provided by script
+            lastPasswordHintChange: passwordHintStatus == "Set" ? Date() : nil,
+            email: nil,
+            isActive: true, // Assume active if listed
+            createdAt: Date() // Default creation date
         )
+        
+        logger.info("Created UserInfo for: \(cleanUsername) (\(userType))")
+        return userInfo
     }
     
-    private func getUserRecord(username: String) -> [String: Any]? {
-        let process = Process()
-        process.launchPath = "/usr/bin/dscl"
-        process.arguments = [".", "-read", "/Users/\(username)"]
+    private func parseDate(from dateString: String) -> Date? {
+        if dateString == "Never" || dateString == "Unknown" || dateString.isEmpty {
+            return nil
+        }
         
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        process.launch()
-        process.waitUntilExit()
+        // Try multiple date formatters
+        let formatters = [
+            createFormatter("EEE MMM dd HH:mm:ss yyyy"),
+            createFormatter("EEE MMM dd HH:mm yyyy"),
+            createFormatter("MMM dd HH:mm"),
+            createFormatter("yyyy-MM-dd HH:mm:ss"),
+            createFormatter("MM/dd/yyyy HH:mm:ss")
+        ]
         
-        guard process.terminationStatus == 0 else { return nil }
-        
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(data: data, encoding: .utf8) ?? ""
-        
-        var record: [String: Any] = [:]
-        let lines = output.components(separatedBy: .newlines)
-        
-        for line in lines {
-            let components = line.components(separatedBy: ": ")
-            if components.count >= 2 {
-                let key = components[0].trimmingCharacters(in: .whitespaces)
-                let value = components[1...].joined(separator: ": ").trimmingCharacters(in: .whitespaces)
-                record[key] = value
+        for formatter in formatters {
+            if let date = formatter.date(from: dateString) {
+                return date
             }
         }
         
-        return record
-    }
-    
-    private func isUserAdmin(username: String) -> Bool {
-        let process = Process()
-        process.launchPath = "/usr/bin/dsmemberutil"
-        process.arguments = ["checkmembership", "-U", username, "-G", "admin"]
-        process.launch()
-        process.waitUntilExit()
-        
-        return process.terminationStatus == 0
-    }
-    
-    private func getSecureTokenStatus(for username: String) -> SecureTokenStatus {
-        let process = Process()
-        process.launchPath = "/usr/sbin/sysadminctl"
-        process.arguments = ["-secureTokenStatus", username]
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        process.launch()
-        process.waitUntilExit()
-        
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(data: data, encoding: .utf8) ?? ""
-        
-        if output.contains("ENABLED") {
-            return .enabled
-        } else if output.contains("DISABLED") {
-            return .disabled
-        } else {
-            return .unknown
-        }
-    }
-    
-    private func getLastLoginTime(for username: String) -> Date? {
-        let process = Process()
-        process.launchPath = "/usr/bin/last"
-        process.arguments = ["-1", username]
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.launch()
-        process.waitUntilExit()
-        
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(data: data, encoding: .utf8) ?? ""
-        
-        return parseLastOutput(output)
-    }
-    
-    private func getLastLogoutTime(for username: String) -> Date? {
         return nil
     }
     
-    private func getLastPasswordChangeTime(for username: String) -> Date? {
-        let process = Process()
-        process.launchPath = "/usr/bin/dscl"
-        process.arguments = [".", "-read", "/Users/\(username)", "passwordLastSetTime"]
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.launch()
-        process.waitUntilExit()
-        
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(data: data, encoding: .utf8) ?? ""
-        
-        return parsePasswordChangeTime(output)
-    }
-    
-    private func getLastTerminalSessionTime(for username: String) -> Date? {
-        return Calendar.current.date(byAdding: .hour, value: -Int.random(in: 1...48), to: Date())
-    }
-    
-    private func parseLastOutput(_ output: String) -> Date? {
+    private func createFormatter(_ format: String) -> DateFormatter {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEE MMM dd HH:mm"
+        formatter.dateFormat = format
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        
-        let lines = output.components(separatedBy: .newlines)
-        for line in lines {
-            if !line.isEmpty && !line.contains("wtmp begins") {
-                let components = line.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-                if components.count >= 4 {
-                    let dateString = "\(components[3]) \(components[4]) \(components[5]) \(components[6])"
-                    if let date = formatter.date(from: dateString) {
-                        return Calendar.current.date(byAdding: .year, value: Calendar.current.component(.year, from: Date()) - 1970, to: date)
-                    }
-                }
-            }
-        }
-        return nil
+        return formatter
     }
     
-    private func parsePasswordChangeTime(_ output: String) -> Date? {
-        let components = output.components(separatedBy: .newlines)
-        for component in components {
-            if component.contains("passwordLastSetTime") {
-                let parts = component.components(separatedBy: ": ")
-                if parts.count > 1, let timestamp = Double(parts[1].trimmingCharacters(in: .whitespaces)) {
-                    return Date(timeIntervalSince1970: timestamp)
-                }
-            }
-        }
-        return nil
-    }
 }

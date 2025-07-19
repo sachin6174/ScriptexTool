@@ -11,6 +11,7 @@ struct UserInfo: Identifiable, Codable {
     let lastLogoutTime: Date?
     let lastPasswordChangeTime: Date?
     let lastTerminalSessionTime: Date?
+    let lastPasswordHintChange: Date?
     let createdAt: Date
     let isActive: Bool
     
@@ -25,6 +26,7 @@ struct UserInfo: Identifiable, Codable {
         lastLogoutTime: Date? = nil,
         lastPasswordChangeTime: Date? = nil,
         lastTerminalSessionTime: Date? = nil,
+        lastPasswordHintChange: Date? = nil,
         createdAt: Date = Date(),
         isActive: Bool = true
     ) {
@@ -38,6 +40,7 @@ struct UserInfo: Identifiable, Codable {
         self.lastLogoutTime = lastLogoutTime
         self.lastPasswordChangeTime = lastPasswordChangeTime
         self.lastTerminalSessionTime = lastTerminalSessionTime
+        self.lastPasswordHintChange = lastPasswordHintChange
         self.createdAt = createdAt
         self.isActive = isActive
     }
@@ -84,67 +87,9 @@ enum SecureTokenStatus: String, CaseIterable, Codable {
     }
 }
 
+// MARK: - UserInfo Extensions
+
 extension UserInfo {
-    static let mockUsers: [UserInfo] = [
-        UserInfo(
-            username: "admin",
-            fullName: "System Administrator",
-            email: "admin@scriptex.local",
-            userType: .admin,
-            secureTokenStatus: .enabled,
-            lastLoginTime: Calendar.current.date(byAdding: .hour, value: -2, to: Date()),
-            lastLogoutTime: Calendar.current.date(byAdding: .hour, value: -8, to: Date()),
-            lastPasswordChangeTime: Calendar.current.date(byAdding: .day, value: -30, to: Date()),
-            lastTerminalSessionTime: Calendar.current.date(byAdding: .minute, value: -45, to: Date()),
-            createdAt: Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
-        ),
-        UserInfo(
-            username: "sachinkumar",
-            fullName: "Sachin Kumar",
-            email: "sachin@scriptex.local",
-            userType: .admin,
-            secureTokenStatus: .enabled,
-            lastLoginTime: Calendar.current.date(byAdding: .minute, value: -30, to: Date()),
-            lastLogoutTime: Calendar.current.date(byAdding: .hour, value: -10, to: Date()),
-            lastPasswordChangeTime: Calendar.current.date(byAdding: .day, value: -15, to: Date()),
-            lastTerminalSessionTime: Calendar.current.date(byAdding: .minute, value: -15, to: Date()),
-            createdAt: Calendar.current.date(byAdding: .month, value: -6, to: Date()) ?? Date()
-        ),
-        UserInfo(
-            username: "alexis",
-            fullName: "Alexis Bridoux",
-            email: "alexis@scriptex.local",
-            userType: .admin,
-            secureTokenStatus: .enabled,
-            lastLoginTime: Calendar.current.date(byAdding: .hour, value: -1, to: Date()),
-            lastLogoutTime: Calendar.current.date(byAdding: .hour, value: -12, to: Date()),
-            lastPasswordChangeTime: Calendar.current.date(byAdding: .day, value: -45, to: Date()),
-            lastTerminalSessionTime: Calendar.current.date(byAdding: .minute, value: -20, to: Date()),
-            createdAt: Calendar.current.date(byAdding: .year, value: -2, to: Date()) ?? Date()
-        ),
-        UserInfo(
-            username: "guest",
-            fullName: "Guest User",
-            userType: .standard,
-            secureTokenStatus: .disabled,
-            lastLoginTime: Calendar.current.date(byAdding: .day, value: -3, to: Date()),
-            lastLogoutTime: Calendar.current.date(byAdding: .day, value: -3, to: Date()),
-            lastPasswordChangeTime: nil,
-            lastTerminalSessionTime: Calendar.current.date(byAdding: .day, value: -5, to: Date()),
-            createdAt: Calendar.current.date(byAdding: .month, value: -3, to: Date()) ?? Date(),
-            isActive: false
-        ),
-        UserInfo(
-            username: "developer",
-            fullName: "Development User",
-            email: "dev@scriptex.local",
-            userType: .standard,
-            secureTokenStatus: .enabled,
-            lastLoginTime: Calendar.current.date(byAdding: .hour, value: -6, to: Date()),
-            lastLogoutTime: Calendar.current.date(byAdding: .hour, value: -18, to: Date()),
-            lastPasswordChangeTime: Calendar.current.date(byAdding: .day, value: -60, to: Date()),
-            lastTerminalSessionTime: Calendar.current.date(byAdding: .hour, value: -4, to: Date()),
-            createdAt: Calendar.current.date(byAdding: .month, value: -8, to: Date()) ?? Date()
-        )
-    ]
+    /// Sample data for testing purposes only - not used in production
+    static let sampleUsers: [UserInfo] = []
 }
