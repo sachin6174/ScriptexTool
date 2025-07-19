@@ -481,4 +481,18 @@ extension Logger {
         
         log(.debug, message: message, category: category, file: file, function: function, line: line)
     }
+    
+    // App operation logging
+    func logAppOperation(appName: String, operation: String, success: Bool, error: Error? = nil, category: String = "AppManagement", file: String = #file, function: String = #function, line: Int = #line) {
+        var message = "App \(operation): \(appName) - Success: \(success)"
+        
+        if let error = error {
+            message += "\n❌ Error: \(error.localizedDescription)"
+            if let nsError = error as NSError? {
+                message += "\n   Domain: \(nsError.domain) | Code: \(nsError.code)"
+            }
+        }
+        
+        log(success ? .info : .error, message: message, category: category, file: file, function: function, line: line)
+    }
 }
