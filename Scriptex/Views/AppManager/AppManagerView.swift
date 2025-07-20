@@ -270,7 +270,7 @@ class AppManager: ObservableObject {
                 description: "Microsoft's lightweight code editor",
                 downloadURL: "https://code.visualstudio.com/sha/download?build=stable&os=darwin-universal",
                 fileExtension: "zip",
-                installScript: "/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/universal_installer.sh",
+                installScript: "/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/universal_installer.sh",
                 category: "Development",
                 version: "Latest",
                 developer: "Microsoft",
@@ -283,7 +283,7 @@ class AppManager: ObservableObject {
                 description: "Remote desktop access software",
                 downloadURL: "https://download.anydesk.com/anydesk.dmg",
                 fileExtension: "dmg",
-                installScript: "/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/universal_installer.sh",
+                installScript: "/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/universal_installer.sh",
                 category: "Utilities",
                 version: "Latest",
                 developer: "AnyDesk Software GmbH",
@@ -557,7 +557,7 @@ struct AppManagerView: View {
                         statusMessages[app.id] = "Installing \(app.name)..."
                     }
                     
-                    let scriptPath = app.installScript ?? "/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/universal_installer.sh"
+                    let scriptPath = app.installScript ?? "/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/universal_installer.sh"
                     let result = try await ExecutionService.executeScript(at: [scriptPath, "-f", downloadedPath])
                     
                     await MainActor.run {
@@ -595,7 +595,7 @@ struct AppManagerView: View {
         Task {
             do {
                 Logger.shared.info("Launching app: \(app.name)", category: "AppManagement")
-                let scriptPath = "/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/app_manager.sh"
+                let scriptPath = "/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/app_manager.sh"
                 let result = try await ExecutionService.executeScript(at: [scriptPath, "launch", app.name])
                 
                 await MainActor.run {
@@ -628,7 +628,7 @@ struct AppManagerView: View {
         Task {
             do {
                 Logger.shared.info("Quitting app: \(app.name)", category: "AppManagement")
-                let scriptPath = "/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/app_manager.sh"
+                let scriptPath = "/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/app_manager.sh"
                 let result = try await ExecutionService.executeScript(at: [scriptPath, "quit", app.name])
                 
                 await MainActor.run {
@@ -661,7 +661,7 @@ struct AppManagerView: View {
         Task {
             do {
                 Logger.shared.info("Deleting app: \(app.name)", category: "AppManagement")
-                let scriptPath = "/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/app_manager.sh"
+                let scriptPath = "/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/app_manager.sh"
                 let result = try await ExecutionService.executeScript(at: ["bash", "-c", "echo 'y' | \(scriptPath) delete \(app.name)"])
                 
                 await MainActor.run {

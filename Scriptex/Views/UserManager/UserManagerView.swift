@@ -36,7 +36,7 @@ class UserManager: ObservableObject {
     }
     
     private func getUserDetails() async throws -> [UserInfo] {
-        let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/list_user_details.sh"])
+        let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/list_user_details.sh"])
         return parseUserDetails(from: result)
     }
     
@@ -416,7 +416,7 @@ struct UserManagerView: View {
         
         Task {
             do {
-                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/user_manager.sh", "change_password", user.username, "admin"])
+                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/user_manager.sh", "change_password", user.username, "admin"])
                 
                 await MainActor.run {
                     operationStates[user.id]?.isChangingPassword = false
@@ -461,7 +461,7 @@ struct UserManagerView: View {
         
         Task {
             do {
-                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/change_password_hint.sh", "-u", user.username, "-h", trimmedHint])
+                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/change_password_hint.sh", "-u", user.username, "-h", trimmedHint])
                 
                 await MainActor.run {
                     operationStates[user.id]?.isChangingHint = false
@@ -524,7 +524,7 @@ struct UserManagerView: View {
         
         Task {
             do {
-                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/change_user_type.sh", "-u", user.username, "-t", userType])
+                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/change_user_type.sh", "-u", user.username, "-t", userType])
                 
                 await MainActor.run {
                     operationStates[user.id]?.isChangingUserType = false
@@ -556,7 +556,7 @@ struct UserManagerView: View {
         
         Task {
             do {
-                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/user_manager.sh", "change_secure_token", user.username, action])
+                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/user_manager.sh", "change_secure_token", user.username, action])
                 
                 await MainActor.run {
                     operationStates[user.id]?.isChangingSecureToken = false
@@ -587,7 +587,7 @@ struct UserManagerView: View {
         
         Task {
             do {
-                let result = try await ExecutionService.executeScript(at: ["bash", "-c", "echo 'yes' | '/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/user_manager.sh' delete \(user.username)"])
+                let result = try await ExecutionService.executeScript(at: ["bash", "-c", "echo 'yes' | '/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/user_manager.sh' delete \(user.username)"])
                 
                 await MainActor.run {
                     operationStates[user.id]?.isDeletingUser = false
@@ -623,7 +623,7 @@ struct UserManagerView: View {
         Task {
             do {
                 let userTypeParam = newUserType == .administrator ? "admin" : "standard"
-                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/user_manager.sh", "create", newUsername, userTypeParam])
+                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Mac/user_manager.sh", "create", newUsername, userTypeParam])
                 
                 await MainActor.run {
                     if result.contains("created successfully") {
