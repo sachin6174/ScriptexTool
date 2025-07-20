@@ -36,7 +36,7 @@ class UserManager: ObservableObject {
     }
     
     private func getUserDetails() async throws -> [UserInfo] {
-        let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/scripts/list_user_details.sh"])
+        let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/list_user_details.sh"])
         return parseUserDetails(from: result)
     }
     
@@ -416,7 +416,7 @@ struct UserManagerView: View {
         
         Task {
             do {
-                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/scripts/user_manager.sh", "change_password", user.username, "admin"])
+                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/user_manager.sh", "change_password", user.username, "admin"])
                 
                 await MainActor.run {
                     operationStates[user.id]?.isChangingPassword = false
@@ -461,7 +461,7 @@ struct UserManagerView: View {
         
         Task {
             do {
-                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/scripts/change_password_hint.sh", "-u", user.username, "-h", trimmedHint])
+                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/change_password_hint.sh", "-u", user.username, "-h", trimmedHint])
                 
                 await MainActor.run {
                     operationStates[user.id]?.isChangingHint = false
@@ -524,7 +524,7 @@ struct UserManagerView: View {
         
         Task {
             do {
-                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/scripts/change_user_type.sh", "-u", user.username, "-t", userType])
+                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/change_user_type.sh", "-u", user.username, "-t", userType])
                 
                 await MainActor.run {
                     operationStates[user.id]?.isChangingUserType = false
@@ -556,7 +556,7 @@ struct UserManagerView: View {
         
         Task {
             do {
-                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/scripts/user_manager.sh", "change_secure_token", user.username, action])
+                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/user_manager.sh", "change_secure_token", user.username, action])
                 
                 await MainActor.run {
                     operationStates[user.id]?.isChangingSecureToken = false
@@ -587,7 +587,7 @@ struct UserManagerView: View {
         
         Task {
             do {
-                let result = try await ExecutionService.executeScript(at: ["bash", "-c", "echo 'yes' | /Users/sachinkumar/Desktop/scripts/user_manager.sh delete \(user.username)"])
+                let result = try await ExecutionService.executeScript(at: ["bash", "-c", "echo 'yes' | '/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/user_manager.sh' delete \(user.username)"])
                 
                 await MainActor.run {
                     operationStates[user.id]?.isDeletingUser = false
@@ -623,7 +623,7 @@ struct UserManagerView: View {
         Task {
             do {
                 let userTypeParam = newUserType == .administrator ? "admin" : "standard"
-                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/scripts/user_manager.sh", "create", newUsername, userTypeParam])
+                let result = try await ExecutionService.executeScript(at: ["/Users/sachinkumar/Desktop/TerminalScripts All Platforms/Ma/user_manager.sh", "create", newUsername, userTypeParam])
                 
                 await MainActor.run {
                     if result.contains("created successfully") {
@@ -915,7 +915,7 @@ struct CreateUserSheet: View {
     let onCancel: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack {
                 Text("Create New User")
@@ -926,66 +926,87 @@ struct CreateUserSheet: View {
                 
                 Button("Cancel", action: onCancel)
             }
-            .padding(.bottom, 10)
+            .padding(.bottom, 20)
             
-            // Form Fields
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Username")
-                        .font(.headline)
-                    TextField("Enter username", text: $username)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                }
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Full Name")
-                        .font(.headline)
-                    TextField("Enter full name", text: $fullName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                }
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Password")
-                        .font(.headline)
-                    SecureField("Enter password", text: $password)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                }
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("User Type")
-                        .font(.headline)
-                    Picker("User Type", selection: $userType) {
-                        ForEach(UserType.allCases, id: \.self) { type in
-                            HStack {
-                                Image(systemName: type.icon)
-                                Text(type.rawValue)
-                            }.tag(type)
+            // Scrollable Form Content
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Form Fields
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Username")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            TextField("Enter username", text: $username)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Full Name")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            TextField("Enter full name", text: $fullName)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Password")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            SecureField("Enter password", text: $password)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("User Type")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            Picker("User Type", selection: $userType) {
+                                ForEach(UserType.allCases, id: \.self) { type in
+                                    HStack(spacing: 8) {
+                                        Image(systemName: type.icon)
+                                            .foregroundColor(type == .administrator ? .orange : .blue)
+                                        Text(type.rawValue)
+                                    }.tag(type)
+                                }
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .frame(height: 32)
                         }
                     }
-                    .pickerStyle(SegmentedPickerStyle())
+                    
+                    // Extra padding at bottom for scrolling
+                    Color.clear.frame(height: 20)
                 }
+                .padding(.horizontal, 4) // Small padding for scroll content
             }
             
-            Spacer()
-            
-            // Action Buttons
-            HStack {
-                Spacer()
+            // Fixed Action Buttons at Bottom
+            VStack(spacing: 0) {
+                Divider()
+                    .padding(.bottom, 16)
                 
-                Button("Cancel", action: onCancel)
-                    .foregroundColor(.secondary)
-                
-                Button("Create User") {
-                    onCreate()
+                HStack {
+                    Spacer()
+                    
+                    Button("Cancel", action: onCancel)
+                        .foregroundColor(.secondary)
+                        .padding(.trailing, 12)
+                    
+                    Button("Create User") {
+                        onCreate()
+                    }
+                    .buttonStyle(DefaultButtonStyle())
+                    .foregroundColor(.white)
+                    .background(Color.blue)
+                    .cornerRadius(8)
+                    .disabled(username.isEmpty || fullName.isEmpty || password.isEmpty)
                 }
-                .buttonStyle(DefaultButtonStyle())
-                .foregroundColor(.white)
-                .background(Color.blue)
-                .cornerRadius(8)
-                .disabled(username.isEmpty || fullName.isEmpty || password.isEmpty)
             }
         }
         .padding(24)
-        .frame(width: 400, height: 350)
+        .frame(width: 450, height: 480)
+        .background(Color(NSColor.windowBackgroundColor))
     }
 }
