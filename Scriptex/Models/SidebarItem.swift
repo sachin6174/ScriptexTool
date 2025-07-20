@@ -5,7 +5,6 @@ enum SidebarItem: String, CaseIterable {
     case scriptExecution = "Script Execution"
     case appManager = "App Manager"
     case fileManager = "File Manager"
-    case userManagement = "User Management"
     
     var icon: String {
         switch self {
@@ -13,7 +12,6 @@ enum SidebarItem: String, CaseIterable {
         case .scriptExecution: return "terminal"
         case .appManager: return "app.badge"
         case .fileManager: return "folder"
-        case .userManagement: return "person.2.fill"
         }
     }
     
@@ -23,7 +21,6 @@ enum SidebarItem: String, CaseIterable {
         case .scriptExecution: return AppColors.scriptExecution
         case .appManager: return AppColors.appManager
         case .fileManager: return AppColors.fileManager
-        case .userManagement: return AppColors.quaternaryAccent
         }
     }
 }
