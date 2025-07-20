@@ -1,0 +1,1 @@
+if you are developing a featur in mac os related to user management then if you want to check all user present then you ned to goo 

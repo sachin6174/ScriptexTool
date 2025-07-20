@@ -1,0 +1,20 @@
+Sun Jul 20 21:35:50 IST 2025: Running manual style check
+----------------------------------------
+Checking for common style issues...
+75:var UPPERCASE_VAR = "Should be camelCase"
+76:var snake_case_var = "Should be camelCase"
+76:var snake_case_var = "Should be camelCase"
+20:    let result = x * y
+30:let person = Person(name: "John", age: 30)
+34:let optionalValue: String? = nil
+38:let array = [1, 2, 3]
+46:let result = divide(a: 10, b: 0)
+65:let parent = Parent()
+66:let child = Child()
+71:let unusedVariable = "This is never used"
+88:    let result = x * y
+98:let personCorrect = PersonCorrect(name: "Jane", age: 25, email: "jane@example.com")
+99:if let email = personCorrect.email {
+114:if let safeResult = safeDivide(a: 10, b: 2) {
+136:    let parentCorrect = ParentCorrect()
+137:    let childCorrect = ChildCorrect()

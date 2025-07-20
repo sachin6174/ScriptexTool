@@ -44,7 +44,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "49"
             endingLineNumber = "49"
-            landmarkName = "executeAsyncCommand(at:completion:)"
+            landmarkName = "executeScript(at:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -60,7 +60,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "46"
             endingLineNumber = "46"
-            landmarkName = "executeAsyncCommand(at:completion:)"
+            landmarkName = "executeScript(at:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -156,6 +156,22 @@
             endingLineNumber = "78"
             landmarkName = "unknown"
             landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "757A484B-9A42-4D50-ADED-15FD49F59083"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Scriptex/Views/UserManager/UserManagerView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "39"
+            endingLineNumber = "39"
+            landmarkName = "getUserDetails()"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

@@ -1,0 +1,38 @@
+SWIFT ERROR DETECTION SUMMARY REPORT
+Generated on: Sun Jul 20 21:35:50 IST 2025
+Project: SwiftErrorDetection
+
+=== COMPILATION ERRORS ===
+8
+errors found
+
+=== WARNINGS ===
+2
+warnings found
+
+=== MEMORY SAFETY ISSUES ===
+20
+potential memory issues found
+
+=== STYLE ISSUES ===
+Manual style check completed - see manual_style.log
+
+=== FILES GENERATED ===
+total 64
+drwxr-xr-x@ 10 sachinkumar  staff   320 Jul 20 21:35 .
+drwxr-xr-x@  8 sachinkumar  staff   256 Jul 20 21:35 ..
+-rw-r--r--@  1 sachinkumar  staff   150 Jul 20 21:35 advanced_warnings.log
+-rw-r--r--@  1 sachinkumar  staff  1904 Jul 20 21:35 compilation_errors.log
+-rw-r--r--@  1 sachinkumar  staff   822 Jul 20 21:35 manual_style.log
+-rw-r--r--@  1 sachinkumar  staff  3705 Jul 20 21:35 memory_safety.log
+-rw-r--r--@  1 sachinkumar  staff    64 Jul 20 21:35 runtime_errors.log
+-rw-r--r--@  1 sachinkumar  staff  1897 Jul 20 21:35 static_analysis.log
+-rw-r--r--@  1 sachinkumar  staff   349 Jul 20 21:35 summary_report.txt
+-rw-r--r--@  1 sachinkumar  staff   220 Jul 20 21:35 test_results.log
+
+=== RECOMMENDATIONS ===
+1. Fix compilation errors first (see compilation_errors.log)
+2. Address memory safety warnings (see memory_safety.log)
+3. Review style issues for better code quality
+4. Run tests after fixing compilation errors
+5. Use static analysis tools regularly during development

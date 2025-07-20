@@ -47,6 +47,9 @@
 		A1B2C3F02E1FA50E00000001 /* InfoRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3EF2E1FA50E00000001 /* InfoRow.swift */; };
 		A1B2C3F12E1FA50F00000001 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3F22E1FA51000000001 /* Logger.swift */; };
 		A1B2C3F42E1FA51100000001 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3F52E1FA51200000001 /* DetailView.swift */; };
+		A1B2C3F62E1FA51300000001 /* UserInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3F62E1FA51300000002 /* UserInfo.swift */; };
+		A1B2C3F72E1FA51400000001 /* UserManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3F72E1FA51400000002 /* UserManagerView.swift */; };
+		A1B2C3F82E1FA51500000001 /* UserInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3F62E1FA51300000002 /* UserInfo.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -113,6 +116,8 @@
 		A1B2C3EF2E1FA50E00000001 /* InfoRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoRow.swift; sourceTree = "<group>"; };
 		A1B2C3F22E1FA51000000001 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		A1B2C3F52E1FA51200000001 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
+		A1B2C3F62E1FA51300000002 /* UserInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserInfo.swift; sourceTree = "<group>"; };
+		A1B2C3F72E1FA51400000002 /* UserManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserManagerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -199,13 +204,6 @@
 			path = Helper;
 			sourceTree = "<group>";
 		};
-		69593C2B2E2D41B600AEF3C9 /* New Group */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = "New Group";
-			sourceTree = "<group>";
-		};
 		A1B2C3D22E1FA50000000001 /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -213,6 +211,7 @@
 				A1B2C3D52E1FA50100000001 /* SidebarItem.swift */,
 				A1B2C3D72E1FA50200000001 /* NetworkInfo.swift */,
 				A1B2C3D92E1FA50300000001 /* SystemInfo.swift */,
+				A1B2C3F62E1FA51300000002 /* UserInfo.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -220,11 +219,11 @@
 		A1B2C3F32E1FA50000000002 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				69593C2B2E2D41B600AEF3C9 /* New Group */,
 				A1B2C3F42E1FA50000000002 /* Dashboard */,
 				A1B2C3F52E1FA50000000002 /* ScriptExecution */,
 				A1B2C3F62E1FA50000000002 /* AppManager */,
 				A1B2C3F82E1FA50000000002 /* FileManager */,
+				A1B2C3F92E1FA50000000002 /* UserManager */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -281,6 +280,14 @@
 				A1B2C3E72E1FA50A00000001 /* FileManagerView.swift */,
 			);
 			path = FileManager;
+			sourceTree = "<group>";
+		};
+		A1B2C3F92E1FA50000000002 /* UserManager */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3F72E1FA51400000002 /* UserManagerView.swift */,
+			);
+			path = UserManager;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -402,6 +409,8 @@
 				A1B2C3F02E1FA50E00000001 /* InfoRow.swift in Sources */,
 				A1B2C3F12E1FA50F00000001 /* Logger.swift in Sources */,
 				A1B2C3F42E1FA51100000001 /* DetailView.swift in Sources */,
+				A1B2C3F62E1FA51300000001 /* UserInfo.swift in Sources */,
+				A1B2C3F72E1FA51400000001 /* UserManagerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -418,6 +427,7 @@
 				5EB5EEA92B40894B00989C51 /* ConnectionIdentityService.swift in Sources */,
 				5EC2F1962B3CAFA8001AFEFA /* main.swift in Sources */,
 				5EC2F19D2B3CB110001AFEFA /* HelperProtocol.swift in Sources */,
+				A1B2C3F82E1FA51500000001 /* UserInfo.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

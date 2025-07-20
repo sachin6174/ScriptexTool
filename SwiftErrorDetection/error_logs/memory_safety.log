@@ -1,0 +1,80 @@
+Sun Jul 20 21:35:49 IST 2025: Running memory safety
+----------------------------------------
+Sources/main.swift:8:29: error: cannot convert value of type 'String' to expected element type 'Int'
+  6 | 
+  7 | // Error 2: Type mismatch
+  8 | var numbers: [Int] = [1, 2, "three", 4]
+    |                             `- error: cannot convert value of type 'String' to expected element type 'Int'
+  9 | 
+ 10 | // Error 3: Using undefined variable
+
+Sources/main.swift:11:17: error: cannot find 'username' in scope
+  9 | 
+ 10 | // Error 3: Using undefined variable
+ 11 | print("Hello, \(username)")
+    |                 `- error: cannot find 'username' in scope
+ 12 | 
+ 13 | // Error 4: Wrong function signature
+
+Sources/main.swift:31:14: error: value of type 'Person' has no member 'email'
+ 29 | 
+ 30 | let person = Person(name: "John", age: 30)
+ 31 | print(person.email) // 'email' property doesn't exist
+    |              `- error: value of type 'Person' has no member 'email'
+ 32 | 
+ 33 | // Error 7: Force unwrapping nil optional
+
+Sources/main.swift:15:14: error: cannot convert return expression of type 'Int' to return type 'String'
+ 13 | // Error 4: Wrong function signature
+ 14 | func addNumbers(a: Int, b: Int) -> String {
+ 15 |     return a + b  // Type mismatch: returning Int but declared String
+    |              `- error: cannot convert return expression of type 'Int' to return type 'String'
+ 16 | }
+ 17 | 
+
+Sources/main.swift:20:9: warning: initialization of immutable value 'result' was never used; consider replacing with assignment to '_' or removing it [#no-usage]
+ 18 | // Error 5: Missing return statement
+ 19 | func multiply(x: Int, y: Int) -> Int {
+ 20 |     let result = x * y
+    |         `- warning: initialization of immutable value 'result' was never used; consider replacing with assignment to '_' or removing it [#no-usage]
+ 21 |     // Missing return statement
+ 22 | }
+Sources/main.swift:8:29: error: cannot convert value of type 'String' to expected element type 'Int'
+  6 | 
+  7 | // Error 2: Type mismatch
+  8 | var numbers: [Int] = [1, 2, "three", 4]
+    |                             `- error: cannot convert value of type 'String' to expected element type 'Int'
+  9 | 
+ 10 | // Error 3: Using undefined variable
+
+Sources/main.swift:11:17: error: cannot find 'username' in scope
+  9 | 
+ 10 | // Error 3: Using undefined variable
+ 11 | print("Hello, \(username)")
+    |                 `- error: cannot find 'username' in scope
+ 12 | 
+ 13 | // Error 4: Wrong function signature
+
+Sources/main.swift:31:14: error: value of type 'Person' has no member 'email'
+ 29 | 
+ 30 | let person = Person(name: "John", age: 30)
+ 31 | print(person.email) // 'email' property doesn't exist
+    |              `- error: value of type 'Person' has no member 'email'
+ 32 | 
+ 33 | // Error 7: Force unwrapping nil optional
+
+Sources/main.swift:15:14: error: cannot convert return expression of type 'Int' to return type 'String'
+ 13 | // Error 4: Wrong function signature
+ 14 | func addNumbers(a: Int, b: Int) -> String {
+ 15 |     return a + b  // Type mismatch: returning Int but declared String
+    |              `- error: cannot convert return expression of type 'Int' to return type 'String'
+ 16 | }
+ 17 | 
+
+Sources/main.swift:20:9: warning: initialization of immutable value 'result' was never used; consider replacing with assignment to '_' or removing it [#no-usage]
+ 18 | // Error 5: Missing return statement
+ 19 | func multiply(x: Int, y: Int) -> Int {
+ 20 |     let result = x * y
+    |         `- warning: initialization of immutable value 'result' was never used; consider replacing with assignment to '_' or removing it [#no-usage]
+ 21 |     // Missing return statement
+ 22 | }

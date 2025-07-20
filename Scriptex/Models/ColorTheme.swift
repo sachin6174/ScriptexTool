@@ -19,6 +19,7 @@ struct AppColors {
     static let dashboard = primaryAccent
     static let scriptExecution = secondaryAccent
     static let appManager = tertiaryAccent
+    static let userManager = Color(red: 0.565, green: 0.565, blue: 0.565) // SF Gray
     static let fileManager = quaternaryAccent
     
     // MARK: - Background System

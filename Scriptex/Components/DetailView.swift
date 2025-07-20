@@ -15,6 +15,8 @@ struct DetailView: View {
                 ScriptExecutionView()
             case .appManager:
                 AppManagerView()
+            case .userManager:
+                UserManagerView()
             case .fileManager:
                 FileManagerView()
             }
