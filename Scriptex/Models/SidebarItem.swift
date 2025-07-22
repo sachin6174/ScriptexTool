@@ -6,6 +6,8 @@ enum SidebarItem: String, CaseIterable {
     case appManager = "App Manager"
     case userManager = "User Manager"
     case fileManager = "File Manager"
+    case xcodeShortcuts = "Xcode Shortcuts"
+    case swiftSyntax = "Swift Syntax"
     
     var icon: String {
         switch self {
@@ -14,6 +16,8 @@ enum SidebarItem: String, CaseIterable {
         case .appManager: return "app.badge"
         case .userManager: return "person.3"
         case .fileManager: return "folder"
+        case .xcodeShortcuts: return "command"
+        case .swiftSyntax: return "swift"
         }
     }
     
@@ -24,6 +28,8 @@ enum SidebarItem: String, CaseIterable {
         case .appManager: return AppColors.appManager
         case .userManager: return AppColors.userManager
         case .fileManager: return AppColors.fileManager
+        case .xcodeShortcuts: return AppColors.primaryAccent
+        case .swiftSyntax: return AppColors.secondaryAccent
         }
     }
 }

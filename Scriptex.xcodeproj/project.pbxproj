@@ -50,6 +50,13 @@
 		A1B2C3F62E1FA51300000001 /* UserInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3F62E1FA51300000002 /* UserInfo.swift */; };
 		A1B2C3F72E1FA51400000001 /* UserManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3F72E1FA51400000002 /* UserManagerView.swift */; };
 		A1B2C3F82E1FA51500000001 /* UserInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3F62E1FA51300000002 /* UserInfo.swift */; };
+		C11A8F0BC8C54FEEAD8158B4 /* XcodeShortcutsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F911C102457C43BE84187AC2 /* XcodeShortcutsView.swift */; };
+		0A0EB77A93EE4789B5D94D5C /* XcodeShortcutModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49A1C6B0D9D434682126FAA /* XcodeShortcutModels.swift */; };
+		24AEA4D554BC48E69DF4F121 /* AddCustomShortcutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6991A4355ABF4312A7962D95 /* AddCustomShortcutView.swift */; };
+		C8DC01BCAEB048678472FF59 /* SwiftSyntaxModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4017C5CCFFC3480DA4AAC448 /* SwiftSyntaxModels.swift */; };
+		84836908C8404153A24AEE88 /* SwiftSyntaxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E46E920DF21841D7979F8A0D /* SwiftSyntaxView.swift */; };
+		74B654CFC25847ABB9ED0844 /* CodeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16F3A3FCE5E4ED1B0E84D16 /* CodeDetailView.swift */; };
+		33981A1BB0064D13A8A7D4E007CED7BD /* ButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93136234D51E4A719FAA7F107AAE3BB1 /* ButtonStyles.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -118,6 +125,13 @@
 		A1B2C3F52E1FA51200000001 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
 		A1B2C3F62E1FA51300000002 /* UserInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserInfo.swift; sourceTree = "<group>"; };
 		A1B2C3F72E1FA51400000002 /* UserManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserManagerView.swift; sourceTree = "<group>"; };
+		F911C102457C43BE84187AC2 /* XcodeShortcutsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcodeShortcutsView.swift; sourceTree = "<group>"; };
+		B49A1C6B0D9D434682126FAA /* XcodeShortcutModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcodeShortcutModels.swift; sourceTree = "<group>"; };
+		6991A4355ABF4312A7962D95 /* AddCustomShortcutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCustomShortcutView.swift; sourceTree = "<group>"; };
+		4017C5CCFFC3480DA4AAC448 /* SwiftSyntaxModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftSyntaxModels.swift; sourceTree = "<group>"; };
+		E46E920DF21841D7979F8A0D /* SwiftSyntaxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftSyntaxView.swift; sourceTree = "<group>"; };
+		A16F3A3FCE5E4ED1B0E84D16 /* CodeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeDetailView.swift; sourceTree = "<group>"; };
+		93136234D51E4A719FAA7F107AAE3BB1 /* ButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonStyles.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -224,6 +238,8 @@
 				A1B2C3F62E1FA50000000002 /* AppManager */,
 				A1B2C3F82E1FA50000000002 /* FileManager */,
 				A1B2C3F92E1FA50000000002 /* UserManager */,
+				A1B2C4012E1FA50000000003 /* XcodeShortcuts */,
+				12B49E3EAFF842439B193443 /* SwiftSyntax */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -270,6 +286,7 @@
 				A1B2C3EB2E1FA50C00000001 /* SidebarItemView.swift */,
 				A1B2C3EF2E1FA50E00000001 /* InfoRow.swift */,
 				A1B2C3F52E1FA51200000001 /* DetailView.swift */,
+				93136234D51E4A719FAA7F107AAE3BB1 /* ButtonStyles.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -288,6 +305,26 @@
 				A1B2C3F72E1FA51400000002 /* UserManagerView.swift */,
 			);
 			path = UserManager;
+			sourceTree = "<group>";
+		};
+		A1B2C4012E1FA50000000003 /* XcodeShortcuts */ = {
+			isa = PBXGroup;
+			children = (
+				F911C102457C43BE84187AC2 /* XcodeShortcutsView.swift */,
+				B49A1C6B0D9D434682126FAA /* XcodeShortcutModels.swift */,
+				6991A4355ABF4312A7962D95 /* AddCustomShortcutView.swift */,
+			);
+			path = XcodeShortcuts;
+			sourceTree = "<group>";
+		};
+		12B49E3EAFF842439B193443 /* SwiftSyntax */ = {
+			isa = PBXGroup;
+			children = (
+				4017C5CCFFC3480DA4AAC448 /* SwiftSyntaxModels.swift */,
+				E46E920DF21841D7979F8A0D /* SwiftSyntaxView.swift */,
+				A16F3A3FCE5E4ED1B0E84D16 /* CodeDetailView.swift */,
+			);
+			path = SwiftSyntax;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -411,6 +448,13 @@
 				A1B2C3F42E1FA51100000001 /* DetailView.swift in Sources */,
 				A1B2C3F62E1FA51300000001 /* UserInfo.swift in Sources */,
 				A1B2C3F72E1FA51400000001 /* UserManagerView.swift in Sources */,
+				C11A8F0BC8C54FEEAD8158B4 /* XcodeShortcutsView.swift in Sources */,
+				0A0EB77A93EE4789B5D94D5C /* XcodeShortcutModels.swift in Sources */,
+				24AEA4D554BC48E69DF4F121 /* AddCustomShortcutView.swift in Sources */,
+				C8DC01BCAEB048678472FF59 /* SwiftSyntaxModels.swift in Sources */,
+				84836908C8404153A24AEE88 /* SwiftSyntaxView.swift in Sources */,
+				74B654CFC25847ABB9ED0844 /* CodeDetailView.swift in Sources */,
+				33981A1BB0064D13A8A7D4E007CED7BD /* ButtonStyles.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

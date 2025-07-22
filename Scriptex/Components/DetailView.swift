@@ -19,6 +19,10 @@ struct DetailView: View {
                 UserManagerView()
             case .fileManager:
                 FileManagerView()
+            case .xcodeShortcuts:
+                XcodeShortcutsView()
+            case .swiftSyntax:
+                SwiftSyntaxView()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
