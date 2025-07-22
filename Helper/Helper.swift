@@ -53,6 +53,16 @@ extension Helper: HelperProtocol {
         }
     }
     
+    func executeCommand(_ command: String) async throws -> String {
+        NSLog("Executing command: \(command)")
+        do {
+            return try await ExecutionService.executeCommand(command)
+        } catch {
+            NSLog("Error executing command: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
     func executeAsyncCommand(at path: [String], chunk completion: @escaping (String, Bool, Int32) -> Void) {
         NSLog("Executing async command at \(path)")
         ExecutionService.executeAsyncCommand(at: path) { chunk, isLast, pid in

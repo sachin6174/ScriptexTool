@@ -57,6 +57,7 @@
 		84836908C8404153A24AEE88 /* SwiftSyntaxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E46E920DF21841D7979F8A0D /* SwiftSyntaxView.swift */; };
 		74B654CFC25847ABB9ED0844 /* CodeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16F3A3FCE5E4ED1B0E84D16 /* CodeDetailView.swift */; };
 		33981A1BB0064D13A8A7D4E007CED7BD /* ButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93136234D51E4A719FAA7F107AAE3BB1 /* ButtonStyles.swift */; };
+		E72B005A498047FF822B9ED9AE6DAB8F /* ScriptModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E4489F07B0543A7BDA8BBD733CC9F97 /* ScriptModels.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -132,6 +133,7 @@
 		E46E920DF21841D7979F8A0D /* SwiftSyntaxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftSyntaxView.swift; sourceTree = "<group>"; };
 		A16F3A3FCE5E4ED1B0E84D16 /* CodeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeDetailView.swift; sourceTree = "<group>"; };
 		93136234D51E4A719FAA7F107AAE3BB1 /* ButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonStyles.swift; sourceTree = "<group>"; };
+		7E4489F07B0543A7BDA8BBD733CC9F97 /* ScriptModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptModels.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -267,6 +269,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3E32E1FA50800000001 /* ScriptExecutionView.swift */,
+				7E4489F07B0543A7BDA8BBD733CC9F97 /* ScriptModels.swift */,
 			);
 			path = ScriptExecution;
 			sourceTree = "<group>";
@@ -455,6 +458,7 @@
 				84836908C8404153A24AEE88 /* SwiftSyntaxView.swift in Sources */,
 				74B654CFC25847ABB9ED0844 /* CodeDetailView.swift in Sources */,
 				33981A1BB0064D13A8A7D4E007CED7BD /* ButtonStyles.swift in Sources */,
+				E72B005A498047FF822B9ED9AE6DAB8F /* ScriptModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -25,5 +25,6 @@ import Foundation
 @objc(HelperProtocol)
 public protocol HelperProtocol {
     @objc func executeScript(at path: [String]) async throws -> String
+    @objc func executeCommand(_ command: String) async throws -> String
     @objc func executeAsyncCommand(at path: [String], chunk: @escaping (String, Bool, Int32) -> Void)
 }

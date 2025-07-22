@@ -66,6 +66,39 @@ enum ExecutionService {
         }
     }
     
+    /// Execute a shell command directly.
+    static func executeCommand(_ command: String) async throws -> String {
+        Logger.shared.info("Starting command execution", category: "CommandExecution")
+        Logger.shared.debug("Command: \(command)", category: "CommandExecution")
+        
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
+        do {
+            let result = try await HelperRemoteProvider.remote().executeCommand(command)
+            let duration = CFAbsoluteTimeGetCurrent() - startTime
+            
+            Logger.shared.logScriptExecution(
+                path: "Direct Command: \(command)",
+                success: true,
+                output: result,
+                duration: duration
+            )
+            
+            return result
+        } catch {
+            let duration = CFAbsoluteTimeGetCurrent() - startTime
+            
+            Logger.shared.logScriptExecution(
+                path: "Direct Command: \(command)",
+                success: false,
+                output: error.localizedDescription,
+                duration: duration
+            )
+            
+            throw error
+        }
+    }
+    
     static func executeAsyncCommand(
         at path: [String],
         completion: @escaping (_ chunk: String, _ isLast: Bool, _ pid: Int32) -> ()

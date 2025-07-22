@@ -73,6 +73,52 @@ enum ExecutionService {
         }
     }
     
+    /// Execute a shell command directly.
+    static func executeCommand(_ command: String) async throws -> String {
+        NSLog("Helper ExecutionService: Starting command execution: \(command)")
+        
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
+        do {
+            let result = try await withCheckedThrowingContinuation { continuation in
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/bin/bash")
+                process.arguments = ["-c", command]
+                
+                let pipe = Pipe()
+                process.standardOutput = pipe
+                process.standardError = pipe
+                
+                do {
+                    try process.run()
+                    
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    let output = String(data: data, encoding: .utf8) ?? ""
+                    
+                    process.waitUntilExit()
+                    
+                    if process.terminationStatus == 0 {
+                        continuation.resume(returning: output)
+                    } else {
+                        continuation.resume(throwing: ScriptexError.scriptExecutionFailed(output))
+                    }
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+            
+            let duration = CFAbsoluteTimeGetCurrent() - startTime
+            NSLog("Helper ExecutionService: Command execution completed successfully in \(String(format: "%.2f", duration))s")
+            NSLog("Helper ExecutionService: Output length: \(result.count) characters")
+            
+            return result
+        } catch {
+            let duration = CFAbsoluteTimeGetCurrent() - startTime
+            NSLog("Helper ExecutionService: Command execution failed after \(String(format: "%.2f", duration))s: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
     static func executeAsyncCommand(
         at path: [String],
         completion: @escaping (_ chunk: String, _ isLast: Bool, _ pid: Int32) -> ()
